@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -19,15 +19,19 @@
         }
         body { font-family: -apple-system, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; }
         .container { background: var(--box-bg); padding: 20px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        h1 { text-align: center; margin-top: 0; font-size: 22px; }
+        h1 { text-align: center; margin-top: 0; font-size: 22px; margin-bottom: 5px; }
         
+        .meta-header { text-align: center; font-size: 12px; color: #888; margin-bottom: 20px; line-height: 1.5; }
+        .meta-header a { color: var(--primary); text-decoration: none; font-weight: bold; }
+        .meta-header a:hover { text-decoration: underline; }
+
         input[type="url"] { width: 100%; padding: 15px; margin-bottom: 10px; border: 1px solid #555; border-radius: 8px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); font-size: 16px;}
         button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background 0.2s;}
         button:disabled { background: #555; cursor: not-allowed; }
         
         #debug-console {
             margin-top: 20px; padding: 10px; background: var(--debug-bg); color: #fff;
-            border-radius: 6px; font-family: monospace; font-size: 12px; height: 250px; 
+            border-radius: 6px; font-family: monospace; font-size: 12px; height: 180px; 
             overflow-y: auto; word-break: break-all; border: 2px solid #444;
         }
         .log-info { color: #88ccff; margin-bottom: 3px; }
@@ -42,30 +46,26 @@
     <script>
         window.onerror = function(msg, url, line) {
             var log = document.getElementById('debug-console');
-            if (log) log.innerHTML += '<div class="log-error">[CRASH] Zeile ' + line + ': ' + msg + '</div>';
+            if (log) log.innerHTML += '<div class="log-error">[CRASH] Line ' + line + ': ' + msg + '</div>';
             return false;
         };
-
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(var i = 0; i < registrations.length; i++) { 
-                    registrations[i].unregister(); 
-                    console.log("Alter Service Worker gelöscht.");
-                }
-            });
-        }
     </script>
 </head>
 <body>
 
 <div class="container">
-    <h1>Komoot 2 GPX <span style="font-size:12px; opacity:0.5;">v2.0.2</span></h1>
+    <h1>Komoot 2 GPX</h1>
+    <div class="meta-header">
+        v2.1 | Released: 28.04.2026 | by basecore<br>
+        <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">View on GitHub</a> • 
+        <a href="https://github.com/basecore/Komoot-2-GPX/issues" target="_blank">Report Issue</a>
+    </div>
     
-    <input type="url" id="tourUrl" placeholder="Komoot Link einfügen (z.B. komoot.de/tour/123)" autocomplete="off">
-    <button type="button" id="downloadBtn">Vorschau & GPX Laden</button>
+    <input type="url" id="tourUrl" placeholder="Paste Komoot URL (e.g. komoot.de/tour/123)" autocomplete="off">
+    <button type="button" id="downloadBtn">Preview & Download GPX</button>
     
     <div id="debug-console">
-        <div class="log-system">=== SYSTEM INITIALISIERT ===</div>
+        <div class="log-system">=== SYSTEM READY ===</div>
     </div>
     
     <div id="map-container"></div>
@@ -86,20 +86,24 @@
         consoleDiv.scrollTop = consoleDiv.scrollHeight;
     }
 
+    // Erweiterte 6-Fach Proxy Rotation für maximale Transparenz und Stabilität
     var PROXY_LIST = [
-        function(url) { return 'https://cors.x2u.in/?' + encodeURIComponent(url); },
-        function(url) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url); },
-        function(url) { return 'https://corsproxy.io/?' + encodeURIComponent(url); },
-        function(url) { return 'https://api.cors.lol/?url=' + encodeURIComponent(url); }
+        { name: "cors.x2u.in", url: function(u) { return 'https://cors.x2u.in/?' + encodeURIComponent(u); } },
+        { name: "cors.lol", url: function(u) { return 'https://api.cors.lol/?url=' + encodeURIComponent(u); } },
+        { name: "allorigins.win", url: function(u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); } },
+        { name: "corsproxy.io", url: function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); } },
+        { name: "thingproxy", url: function(u) { return 'https://thingproxy.freeboard.io/fetch/' + u; } },
+        { name: "codetabs", url: function(u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } }
     ];
 
     async function fetchWithFallbacks(targetUrl, contextName) {
-        logMsg('Lade ' + contextName + '...', "system");
+        logMsg('Fetching ' + contextName + '...', "system");
         var lastError = "";
 
         for (var i = 0; i < PROXY_LIST.length; i++) {
-            var proxyUrl = PROXY_LIST[i](targetUrl);
-            logMsg('Versuche Proxy ' + (i+1) + '/' + PROXY_LIST.length + '...', "info");
+            var proxy = PROXY_LIST[i];
+            var proxyUrl = proxy.url(targetUrl);
+            logMsg('Routing via [' + proxy.name + ']...', "info");
             
             try {
                 var response = await fetch(proxyUrl, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
@@ -108,20 +112,21 @@
                 }
                 
                 var text = await response.text();
+                // Blockiert Komoot den Proxy mit einer HTML Captcha Seite?
                 if (text.trim().startsWith('<')) {
-                    throw new Error("Proxy liefert HTML (Blockiert)");
+                    throw new Error("Returned HTML (Proxy likely blocked by Komoot)");
                 }
                 
                 var data = JSON.parse(text);
-                logMsg(contextName + ' erfolgreich über Proxy ' + (i+1) + ' geladen!', "success");
+                logMsg('Success! ' + contextName + ' loaded via ' + proxy.name, "success");
                 return data;
 
             } catch (err) {
-                logMsg('Proxy ' + (i+1) + ' fehlgeschlagen: ' + err.message, "warning");
+                logMsg('Proxy [' + proxy.name + '] failed: ' + err.message, "warning");
                 lastError = err.message;
             }
         }
-        throw new Error('Alle Proxys fehlgeschlagen. Letzter Fehler: ' + lastError);
+        throw new Error('All ' + PROXY_LIST.length + ' proxies failed. Last error: ' + lastError);
     }
 
     function renderMap(coords) {
@@ -146,17 +151,19 @@
             map.fitBounds(trackLayer.getBounds());
             
             setTimeout(function() { map.invalidateSize(); }, 300);
-            logMsg("Karte erfolgreich gezeichnet.", "success");
+            logMsg("Map rendered successfully.", "success");
         } catch(e) {
-            logMsg('Karten-Fehler: ' + e.message, "error");
+            logMsg('Map Error: ' + e.message, "error");
         }
     }
 
-    function generateGPX(name, items) {
-        logMsg("Erstelle GPX-Datei...", "info");
+    function generateGPX(name, items, distance) {
+        var distKm = distance ? (distance / 1000).toFixed(2) + " km" : "Unknown length";
+        logMsg('Compiling GPX File...', "info");
+        logMsg('Track Info: ' + items.length + ' waypoints | ' + distKm, "system");
+        
         var safeName = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         
-        // BUGFIX: Kein einziger Zeilenumbruch mehr in den Strings! Komplett sicher für Copy-Paste.
         var lines = [];
         lines.push('<?xml version="1.0" encoding="UTF-8"?>');
         lines.push('<gpx version="1.1" creator="Komoot2GPX" xmlns="http://www.topografix.com/GPX/1/1">');
@@ -180,7 +187,6 @@
         lines.push('  </trk>');
         lines.push('</gpx>');
 
-        // Hier werden die Zeilen sicher zusammengefügt (ohne Syntax-Gefahr)
         var gpxString = lines.join(String.fromCharCode(10));
 
         try {
@@ -191,9 +197,9 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            logMsg("GPX Download ausgelöst!", "success");
+            logMsg("GPX Download triggered!", "success");
         } catch(e) {
-            logMsg('Download-Fehler: ' + e.message, "error");
+            logMsg('Download Error: ' + e.message, "error");
         }
     }
 
@@ -203,37 +209,37 @@
         var mapDiv = document.getElementById('map-container');
         var consoleDiv = document.getElementById('debug-console');
         
-        consoleDiv.innerHTML = '<div class="log-system">=== NEUER EXPORT GESTARTET ===</div>';
+        consoleDiv.innerHTML = '<div class="log-system">=== NEW EXPORT STARTED ===</div>';
         mapDiv.style.display = 'none';
 
         if (!urlInput) {
-            logMsg("Bitte zuerst eine URL einfügen!", "error");
+            logMsg("Please enter a URL first!", "error");
             return;
         }
 
         btn.disabled = true;
-        btn.innerText = "Verarbeite...";
+        btn.innerText = "Processing...";
 
         try {
-            logMsg('Eingabe: ' + urlInput.substring(0, 40) + '...', "info");
+            logMsg('Input: ' + urlInput.substring(0, 45) + '...', "info");
             
             var tourId = "";
             var isSmartTour = false;
 
+            // Sicheres URL Parsing ohne fehleranfällige Regex
             if (urlInput.indexOf("/smarttour/") > -1) {
                 isSmartTour = true;
-                var parts = urlInput.split("/smarttour/");
-                tourId = parts[1].split("?")[0].split("/")[0].split("#")[0];
+                tourId = urlInput.split("/smarttour/")[1].split("?")[0].split("/")[0].split("#")[0];
             } else if (urlInput.indexOf("/tour/") > -1) {
                 isSmartTour = false;
-                var parts = urlInput.split("/tour/");
-                tourId = parts[1].split("?")[0].split("/")[0].split("#")[0];
+                tourId = urlInput.split("/tour/")[1].split("?")[0].split("/")[0].split("#")[0];
             }
 
             if (tourId === "") {
-                throw new Error("Keine gültige Tour-ID in der URL gefunden.");
+                throw new Error("No valid Tour-ID found in the URL.");
             }
-            logMsg('Tour-Typ: ' + (isSmartTour ? 'Smarttour' : 'Normale Tour') + ' (ID: ' + tourId + ')', "success");
+            
+            logMsg('Tour Type: ' + (isSmartTour ? 'Smarttour' : 'Standard Tour') + ' (ID: ' + tourId + ')', "success");
             
             var tourApiUrl = '';
             var coordsApiUrl = '';
@@ -246,28 +252,30 @@
                 coordsApiUrl = 'https://api.komoot.de/v007/tours/' + tourId + '/coordinates';
             }
 
-            var tourData = await fetchWithFallbacks(tourApiUrl, "Metadaten");
+            var tourData = await fetchWithFallbacks(tourApiUrl, "Metadata");
             var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
-            logMsg('Tour Name: ' + tourName, "info");
+            var tourDistance = tourData.distance || 0; // Komoot liefert Distanz in Metern
+            
+            logMsg('Extracted Name: "' + tourName + '"', "info");
 
-            var coordsData = await fetchWithFallbacks(coordsApiUrl, "Koordinaten");
+            var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
             if (!coordsData.items || coordsData.items.length === 0) {
-                throw new Error("Keine GPS-Punkte empfangen.");
+                throw new Error("No GPS waypoints received.");
             }
             
             renderMap(coordsData.items);
-            generateGPX(tourName, coordsData.items);
+            generateGPX(tourName, coordsData.items, tourDistance);
             
-            logMsg("VORGANG ERFOLGREICH BEENDET", "success");
-            btn.innerText = "Erfolg!";
+            logMsg("PROCESS COMPLETED SUCCESSFULLY", "success");
+            btn.innerText = "Success!";
             
         } catch (error) {
-            logMsg('ABBRUCH: ' + error.message, "error");
-            btn.innerText = "Fehler!";
+            logMsg('ABORTED: ' + error.message, "error");
+            btn.innerText = "Error!";
         } finally {
             setTimeout(function() { 
                 btn.disabled = false; 
-                btn.innerText = "Vorschau & GPX Laden"; 
+                btn.innerText = "Preview & Download GPX"; 
             }, 3000);
         }
     }
@@ -276,9 +284,9 @@
         var btn = document.getElementById('downloadBtn');
         if (btn) {
             btn.addEventListener('click', startExport);
-            logMsg("Button erfolgreich aktiviert.", "info");
+            logMsg("Engine loaded and button active.", "info");
         } else {
-            logMsg("KRITISCHER FEHLER: Button nicht gefunden!", "error");
+            logMsg("CRITICAL: Button not found in DOM!", "error");
         }
     });
 
