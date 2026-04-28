@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Komoot GPX Exporter</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e2124">
+    <style>
+        :root {
+            --bg-color: #f4f4f9;
+            --text-color: #333;
+            --box-bg: #fff;
+            --primary: #97b536; /* Komoot Grün */
+            --primary-hover: #7a942a;
+            --error: #e74c3c;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #1e2124;
+                --text-color: #f4f4f9;
+                --box-bg: #2c2f33;
+            }
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        .container {
+            background-color: var(--box-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 500px;
+        }
+        h1 { margin-top: 0; font-size: 24px; text-align: center; }
+        p { text-align: center; font-size: 14px; margin-bottom: 25px; opacity: 0.8; }
+        
+        input[type="url"] {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+            box-sizing: border-box;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover { background-color: var(--primary-hover); }
+        button:disabled { background-color: #ccc; cursor: not-allowed; }
+        
+        #status {
+            margin-top: 20px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            min-height: 20px;
+        }
+        .error { color: var(--error); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>GPX Downloader</h1>
+    <p>Füge den Link einer öffentlichen Komoot-Tour ein (z.B. komoot.de/tour/123456).</p>
+    
+    <input type="url" id="tourUrl" placeholder="https://www.komoot.de/tour/..." autocomplete="off">
+    <button id="downloadBtn" onclick="processTour()">GPX Herunterladen</button>
+    
+    <div id="status"></div>
+</div>
+
+<script>
+    // Service Worker registrieren (für Installierbarkeit als PWA)
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW setup failed', err));
+        });
+    }
+
+    async function processTour() {
+        const urlInput = document.getElementById('tourUrl').value.trim();
+        const statusDiv = document.getElementById('status');
+        const btn = document.getElementById('downloadBtn');
+        
+        statusDiv.className = '';
+        statusDiv.innerText = '';
+        
+        // Tour-ID mit Regex extrahieren
+        const match = urlInput.match(/tour/(d+)/);
+        if (!match) {
+            statusDiv.innerText = "Fehler: Keine gültige Komoot Tour-ID gefunden.";
+            statusDiv.className = "error";
+            return;
+        }
+        
+        const tourId = match[1];
+        btn.disabled = true;
+        statusDiv.innerText = `Lade Daten für Tour ${tourId}...`;
+
+        try {
+            // Wir nutzen corsproxy.io um die Blockade durch CORS zu umgehen
+            const proxy = "https://corsproxy.io/?";
+            const tourApi = proxy + encodeURIComponent(`https://api.komoot.de/v007/tours/${tourId}`);
+            const coordsApi = proxy + encodeURIComponent(`https://api.komoot.de/v007/tours/${tourId}/coordinates`);
+            
+            // Lade Metadaten und Koordinaten parallel
+            const [tourRes, coordsRes] = await Promise.all([
+                fetch(tourApi, { headers: { 'Accept': 'application/json' } }),
+                fetch(coordsApi, { headers: { 'Accept': 'application/json' } })
+            ]);
+
+            if (!tourRes.ok || !coordsRes.ok) throw new Error("API-Fehler. Ist die Tour privat?");
+
+            const tourData = await tourRes.json();
+            const coordsData = await coordsRes.json();
+            
+            if (!coordsData.items || coordsData.items.length === 0) {
+                throw new Error("Keine GPS-Punkte in dieser Tour gefunden.");
+            }
+
+            generateAndDownloadGPX(tourData.name || `Komoot_Tour_${tourId}`, coordsData.items);
+            statusDiv.innerText = "Erfolgreich heruntergeladen!";
+            statusDiv.style.color = "var(--primary)";
+            
+        } catch (error) {
+            statusDiv.innerText = `Fehler: ${error.message}`;
+            statusDiv.className = "error";
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    function generateAndDownloadGPX(name, items) {
+        // Sicheres XML-Escaping für den Namen
+        const safeName = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        
+        let gpx = `<?xml version="1.0" encoding="UTF-8"?>
+`;
+        gpx += `<gpx version="1.1" creator="Komoot Web PWA" xmlns="http://www.topografix.com/GPX/1/1">
+`;
+        gpx += `  <trk>
+    <name>${safeName}</name>
+    <trkseg>
+`;
+
+        items.forEach(pt => {
+            gpx += `      <trkpt lat="${pt.lat}" lon="${pt.lng}">
+`;
+            if (pt.alt !== undefined) gpx += `        <ele>${pt.alt}</ele>
+`;
+            if (pt.t) gpx += `        <time>${new Date(pt.t).toISOString()}</time>
+`;
+            gpx += `      </trkpt>
+`;
+        });
+
+        gpx += `    </trkseg>
+  </trk>
+</gpx>`;
+
+        // Datei-Download auslösen
+        const blob = new Blob([gpx], { type: "application/gpx+xml" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        const safeFilename = name.replace(/[^a-z0-9äöüß]/gi, '_').toLowerCase();
+        link.download = `${safeFilename}.gpx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+</body>
+</html>
