@@ -1,0 +1,16 @@
+{
+  "name": "Komoot GPX",
+  "short_name": "GPX Export",
+  "description": "Lädt Komoot-Touren als GPX herunter",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1e2124",
+  "theme_color": "#97b536",
+  "icons": [
+    {
+      "src": "https://upload.wikimedia.org/wikipedia/commons/4/44/Komoot_logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
