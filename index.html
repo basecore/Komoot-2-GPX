@@ -48,8 +48,8 @@
 
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) { 
-                    registration.unregister(); 
+                for(var i = 0; i < registrations.length; i++) { 
+                    registrations[i].unregister(); 
                     console.log("Alter Service Worker gelöscht.");
                 }
             });
@@ -59,7 +59,7 @@
 <body>
 
 <div class="container">
-    <h1>Komoot 2 GPX <span style="font-size:12px; opacity:0.5;">v2.0.1</span></h1>
+    <h1>Komoot 2 GPX <span style="font-size:12px; opacity:0.5;">v2.0.2</span></h1>
     
     <input type="url" id="tourUrl" placeholder="Komoot Link einfügen (z.B. komoot.de/tour/123)" autocomplete="off">
     <button type="button" id="downloadBtn">Vorschau & GPX Laden</button>
@@ -74,18 +74,19 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 
 <script>
-    let map = null;
-    let trackLayer = null;
+    var map = null;
+    var trackLayer = null;
 
-    function logMsg(message, type = 'info') {
-        const consoleDiv = document.getElementById('debug-console');
+    function logMsg(message, type) {
+        if (!type) type = 'info';
+        var consoleDiv = document.getElementById('debug-console');
         if (!consoleDiv) return;
-        const time = new Date().toTimeString().split(' ')[0];
+        var time = new Date().toTimeString().split(' ')[0];
         consoleDiv.innerHTML += '<div class="log-' + type + '">[' + time + '] ' + message + '</div>';
         consoleDiv.scrollTop = consoleDiv.scrollHeight;
     }
 
-    const PROXY_LIST = [
+    var PROXY_LIST = [
         function(url) { return 'https://cors.x2u.in/?' + encodeURIComponent(url); },
         function(url) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url); },
         function(url) { return 'https://corsproxy.io/?' + encodeURIComponent(url); },
@@ -94,24 +95,24 @@
 
     async function fetchWithFallbacks(targetUrl, contextName) {
         logMsg('Lade ' + contextName + '...', "system");
-        let lastError = "";
+        var lastError = "";
 
-        for (let i = 0; i < PROXY_LIST.length; i++) {
-            const proxyUrl = PROXY_LIST[i](targetUrl);
+        for (var i = 0; i < PROXY_LIST.length; i++) {
+            var proxyUrl = PROXY_LIST[i](targetUrl);
             logMsg('Versuche Proxy ' + (i+1) + '/' + PROXY_LIST.length + '...', "info");
             
             try {
-                const response = await fetch(proxyUrl, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
+                var response = await fetch(proxyUrl, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
                 if (!response.ok) {
                     throw new Error('HTTP ' + response.status);
                 }
                 
-                const text = await response.text();
+                var text = await response.text();
                 if (text.trim().startsWith('<')) {
                     throw new Error("Proxy liefert HTML (Blockiert)");
                 }
                 
-                const data = JSON.parse(text);
+                var data = JSON.parse(text);
                 logMsg(contextName + ' erfolgreich über Proxy ' + (i+1) + ' geladen!', "success");
                 return data;
 
@@ -125,7 +126,7 @@
 
     function renderMap(coords) {
         try {
-            const mapDiv = document.getElementById('map-container');
+            var mapDiv = document.getElementById('map-container');
             mapDiv.style.display = 'block';
             
             if (!map) {
@@ -136,7 +137,11 @@
                 map.removeLayer(trackLayer);
             }
 
-            const latLngs = coords.map(function(pt) { return [pt.lat, pt.lng]; });
+            var latLngs = [];
+            for (var i = 0; i < coords.length; i++) {
+                latLngs.push([coords[i].lat, coords[i].lng]);
+            }
+
             trackLayer = L.polyline(latLngs, { color: '#97b536', weight: 4 }).addTo(map);
             map.fitBounds(trackLayer.getBounds());
             
@@ -149,38 +154,38 @@
 
     function generateGPX(name, items) {
         logMsg("Erstelle GPX-Datei...", "info");
-        const safeName = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var safeName = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         
-        let gpx = '<?xml version="1.0" encoding="UTF-8"?>
-';
-        gpx += '<gpx version="1.1" creator="Komoot2GPX" xmlns="http://www.topografix.com/GPX/1/1">
-';
-        gpx += '  <trk>
-    <name>' + safeName + '</name>
-    <trkseg>
-';
+        // BUGFIX: Kein einziger Zeilenumbruch mehr in den Strings! Komplett sicher für Copy-Paste.
+        var lines = [];
+        lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+        lines.push('<gpx version="1.1" creator="Komoot2GPX" xmlns="http://www.topografix.com/GPX/1/1">');
+        lines.push('  <trk>');
+        lines.push('    <name>' + safeName + '</name>');
+        lines.push('    <trkseg>');
 
-        items.forEach(function(pt) {
-            gpx += '      <trkpt lat="' + pt.lat + '" lon="' + pt.lng + '">
-';
+        for (var i = 0; i < items.length; i++) {
+            var pt = items[i];
+            lines.push('      <trkpt lat="' + pt.lat + '" lon="' + pt.lng + '">');
             if (pt.alt !== undefined) {
-                gpx += '        <ele>' + pt.alt + '</ele>
-';
+                lines.push('        <ele>' + pt.alt + '</ele>');
             }
             if (pt.t) {
-                gpx += '        <time>' + new Date(pt.t).toISOString() + '</time>
-';
+                lines.push('        <time>' + new Date(pt.t).toISOString() + '</time>');
             }
-            gpx += '      </trkpt>
-';
-        });
-        gpx += '    </trkseg>
-  </trk>
-</gpx>';
+            lines.push('      </trkpt>');
+        }
+        
+        lines.push('    </trkseg>');
+        lines.push('  </trk>');
+        lines.push('</gpx>');
+
+        // Hier werden die Zeilen sicher zusammengefügt (ohne Syntax-Gefahr)
+        var gpxString = lines.join(String.fromCharCode(10));
 
         try {
-            const blob = new Blob([gpx], { type: "application/gpx+xml" });
-            const link = document.createElement("a");
+            var blob = new Blob([gpxString], { type: "application/gpx+xml" });
+            var link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
             link.download = name.replace(/[^a-z0-9äöüß]/gi, '_').toLowerCase() + '.gpx';
             document.body.appendChild(link);
@@ -193,10 +198,10 @@
     }
 
     async function startExport() {
-        const urlInput = document.getElementById('tourUrl').value.trim();
-        const btn = document.getElementById('downloadBtn');
-        const mapDiv = document.getElementById('map-container');
-        const consoleDiv = document.getElementById('debug-console');
+        var urlInput = document.getElementById('tourUrl').value.trim();
+        var btn = document.getElementById('downloadBtn');
+        var mapDiv = document.getElementById('map-container');
+        var consoleDiv = document.getElementById('debug-console');
         
         consoleDiv.innerHTML = '<div class="log-system">=== NEUER EXPORT GESTARTET ===</div>';
         mapDiv.style.display = 'none';
@@ -212,19 +217,18 @@
         try {
             logMsg('Eingabe: ' + urlInput.substring(0, 40) + '...', "info");
             
-            const match = urlInput.match(/(?:tour|smarttour)/(d+)/);
+            var match = urlInput.match(/(?:tour|smarttour)/(d+)/);
             if (!match) {
                 throw new Error("Keine gültige Tour-ID in der URL gefunden.");
             }
             
-            const tourId = match[1];
-            const isSmartTour = urlInput.includes('/smarttour/');
+            var tourId = match[1];
+            var isSmartTour = urlInput.includes('/smarttour/');
             logMsg('Tour-Typ: ' + (isSmartTour ? 'Smarttour' : 'Normale Tour') + ' (ID: ' + tourId + ')', "success");
             
-            let tourApiUrl = '';
-            let coordsApiUrl = '';
+            var tourApiUrl = '';
+            var coordsApiUrl = '';
 
-            // Hier lag der Syntax Error. Jetzt flach und sauber gelöst:
             if (isSmartTour) {
                 tourApiUrl = 'https://api.komoot.de/v007/discover_tours/' + tourId;
                 coordsApiUrl = 'https://api.komoot.de/v007/smart_tours/' + tourId + '/coordinates';
@@ -233,11 +237,11 @@
                 coordsApiUrl = 'https://api.komoot.de/v007/tours/' + tourId + '/coordinates';
             }
 
-            const tourData = await fetchWithFallbacks(tourApiUrl, "Metadaten");
-            const tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
+            var tourData = await fetchWithFallbacks(tourApiUrl, "Metadaten");
+            var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
             logMsg('Tour Name: ' + tourName, "info");
 
-            const coordsData = await fetchWithFallbacks(coordsApiUrl, "Koordinaten");
+            var coordsData = await fetchWithFallbacks(coordsApiUrl, "Koordinaten");
             if (!coordsData.items || coordsData.items.length === 0) {
                 throw new Error("Keine GPS-Punkte empfangen.");
             }
@@ -260,7 +264,7 @@
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        const btn = document.getElementById('downloadBtn');
+        var btn = document.getElementById('downloadBtn');
         if (btn) {
             btn.addEventListener('click', startExport);
             logMsg("Button erfolgreich aktiviert.", "info");
