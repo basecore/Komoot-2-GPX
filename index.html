@@ -96,9 +96,9 @@
             border-radius: 6px;
             font-family: monospace;
             font-size: 12px;
-            height: 180px;
+            height: 150px;
             overflow-y: auto;
-            word-wrap: break-word;
+            word-break: break-all;
         }
         .log-info { color: #3498db; }
         .log-success { color: var(--primary); font-weight: bold; }
@@ -121,16 +121,16 @@
     <h1>Komoot 2 GPX</h1>
     
     <div class="meta-info">
-        v1.3.0 | Proxy Bugfix | 28.04.2026 | by basecore<br>
+        v1.4.0 | 28.04.2026 | by basecore<br>
         Projekt auf <a href="https://github.com/basecore/Komoot-2-GPX/" target="_blank">GitHub</a> ansehen
     </div>
     
     <input type="url" id="tourUrl" placeholder="Link einfügen (z.B. komoot.de/tour/123)" autocomplete="off">
     <button id="downloadBtn" onclick="processTour()">Vorschau & GPX Laden</button>
     
-    <!-- Die Konsole ist nun immer sichtbar für garantierte Logs -->
+    <!-- Die Logging-Konsole -->
     <div id="debug-console">
-        <div class="log-info">[Bereit] Warte auf URL Eingabe...</div>
+        <div class="log-info">[Bereit] App geladen und startklar.</div>
     </div>
     
     <div id="map-container"></div>
@@ -139,76 +139,79 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
 <script>
-    if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW setup failed', err));
-        });
-    }
-
     let map = null;
     let trackLayer = null;
 
+    // --- LOGGING SYSTEM ---
     function logMsg(message, type = 'info') {
-        const consoleDiv = document.getElementById('debug-console');
-        const span = document.createElement('div');
-        span.className = `log-${type}`;
-        const time = new Date().toLocaleTimeString();
-        span.innerText = `[${time}] ${message}`;
-        consoleDiv.appendChild(span);
-        consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        try {
+            const consoleDiv = document.getElementById('debug-console');
+            const span = document.createElement('div');
+            span.className = `log-${type}`;
+            const time = new Date().toLocaleTimeString();
+            span.innerText = `[${time}] ${message}`;
+            consoleDiv.appendChild(span);
+            consoleDiv.scrollTop = consoleDiv.scrollHeight;
+            console.log(`[${type.toUpperCase()}] ${message}`);
+        } catch(e) {
+            console.error("Logger crashed", e);
+        }
     }
 
     function clearLog() {
-        const consoleDiv = document.getElementById('debug-console');
-        consoleDiv.innerHTML = '<div class="log-info">[Bereit] Neuer Start...</div>';
+        document.getElementById('debug-console').innerHTML = '<div class="log-info">[Start] Neuer Vorgang...</div>';
     }
 
+    // --- LEAFLET KARTE ---
     function renderMap(coords) {
-        try {
-            logMsg("Initialisiere Leaflet Karte...", "info");
-            const mapDiv = document.getElementById('map-container');
-            mapDiv.style.display = 'block';
+        logMsg("Zeichne Karte...", "info");
+        const mapDiv = document.getElementById('map-container');
+        mapDiv.style.display = 'block';
 
-            if (!map) {
-                map = L.map('map-container');
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '&copy; OpenStreetMap'
-                }).addTo(map);
+        if (!map) {
+            map = L.map('map-container');
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap'
+            }).addTo(map);
+        }
+
+        if (trackLayer) map.removeLayer(trackLayer);
+
+        const latLngs = coords.map(pt => [pt.lat, pt.lng]);
+        trackLayer = L.polyline(latLngs, { color: '#97b536', weight: 4 }).addTo(map);
+        map.fitBounds(trackLayer.getBounds());
+        
+        setTimeout(() => { map.invalidateSize(); }, 100);
+        logMsg("Karte fertig gerendert.", "success");
+    }
+
+    // --- FETCH HELPER ---
+    async function safeFetch(url) {
+        // Neuer stabiler Proxy: cors.lol
+        const proxyUrl = `https://api.cors.lol/?url=${url}`;
+        logMsg(`Frage an: ${url.split('/').slice(-2).join('/')}`, "info");
+
+        const response = await fetch(proxyUrl, {
+            headers: {
+                'Accept': 'application/json'
             }
+        });
 
-            if (trackLayer) map.removeLayer(trackLayer);
-
-            const latLngs = coords.map(pt => [pt.lat, pt.lng]);
-            trackLayer = L.polyline(latLngs, { color: '#97b536', weight: 4 }).addTo(map);
-            map.fitBounds(trackLayer.getBounds());
-            
-            setTimeout(() => { map.invalidateSize(); }, 100);
-            logMsg("Karte erfolgreich gerendert.", "success");
-        } catch (e) {
-            logMsg(`Karten-Fehler: ${e.message}`, "error");
+        if (!response.ok) {
+            throw new Error(`HTTP Error ${response.status} beim Proxy-Abruf`);
         }
+
+        const text = await response.text();
+        
+        // Prüfen ob der Proxy versehentlich HTML zurückgibt
+        if (text.trim().startsWith('<')) {
+            throw new Error(`API hat HTML statt JSON gesendet. Wahrscheinlich durch Komoot blockiert.`);
+        }
+
+        return JSON.parse(text);
     }
 
-    // SICHERER ALLORIGINS PROXY FETCH FUNKTION
-    async function fetchViaProxy(url) {
-        // allorigins.win wickelt die JSON Antwort sicher in ein neues JSON Objekt unter 'contents'
-        const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
-        logMsg(`Frage Proxy an für: ${url.split('/').pop()}`, "info");
-        
-        const response = await fetch(proxyUrl);
-        if (!response.ok) throw new Error(`Proxy Netzwerk-Status: ${response.status}`);
-        
-        const proxyData = await response.json();
-        
-        // Prüfen, ob die eingewickelte Antwort reines HTML ist (Captchas etc.)
-        if (proxyData.contents.trim().startsWith("<!DOCTYPE") || proxyData.contents.trim().startsWith("<html")) {
-             throw new Error(`API hat HTML statt JSON gesendet. Tour evt. privat oder Proxy blockiert.`);
-        }
-        
-        // Echtes JSON auspacken
-        return JSON.parse(proxyData.contents);
-    }
-
+    // --- HAUPT PROZESS ---
     async function processTour() {
         const urlInput = document.getElementById('tourUrl').value.trim();
         const btn = document.getElementById('downloadBtn');
@@ -216,7 +219,7 @@
         
         clearLog();
         mapDiv.style.display = 'none';
-        
+
         if (!urlInput) {
             logMsg("Abbruch: Keine URL eingegeben.", "error");
             return;
@@ -226,17 +229,15 @@
         btn.innerText = "Verarbeite...";
 
         try {
-            logMsg("Prüfe URL-Format...", "info");
+            logMsg("Analysiere URL...", "info");
             const match = urlInput.match(/(?:tour|smarttour)/(d+)/);
-            if (!match) throw new Error("URL enthält keine gültige ID (tour/123 oder smarttour/123).");
+            if (!match) throw new Error("Ungültiges URL-Format. Keine ID gefunden.");
             
             const tourId = match[1];
             const isSmartTour = urlInput.includes('/smarttour/');
-            logMsg(`Erkannt: ${isSmartTour ? 'Smarttour' : 'Normale Tour'} (ID: ${tourId})`, "success");
+            logMsg(`Typ: ${isSmartTour ? 'Smarttour' : 'Normale Tour'} (ID: ${tourId})`, "success");
             
             let tourApiUrl, coordsApiUrl;
-
-            // BUGFIX FÜR KOMOOT ROUTING
             if (isSmartTour) {
                 tourApiUrl = `https://api.komoot.de/v007/discover_tours/${tourId}`;
                 coordsApiUrl = `https://api.komoot.de/v007/smart_tours/${tourId}/coordinates`;
@@ -245,38 +246,40 @@
                 coordsApiUrl = `https://api.komoot.de/v007/tours/${tourId}/coordinates`;
             }
 
-            // SICHERER ABRUF ÜBER NEUEN PROXY
-            logMsg(`Schritt 1: Lade Metadaten...`, "info");
-            const tourData = await fetchViaProxy(tourApiUrl);
-            logMsg(`Metadaten empfangen!`, "success");
+            // 1. Meta Daten abrufen
+            logMsg(`Lade Metadaten...`, "info");
+            const tourData = await safeFetch(tourApiUrl);
+            const tourName = tourData.name || tourData.title || `Komoot_Tour_${tourId}`;
+            logMsg(`Name: "${tourName}"`, "success");
 
-            logMsg(`Schritt 2: Lade Koordinaten...`, "info");
-            const coordsData = await fetchViaProxy(coordsApiUrl);
+            // 2. Koordinaten abrufen
+            logMsg(`Lade GPS-Punkte...`, "info");
+            const coordsData = await safeFetch(coordsApiUrl);
             
             if (!coordsData.items || coordsData.items.length === 0) {
-                throw new Error("API meldet Erfolg, aber keine GPS-Punkte vorhanden.");
+                throw new Error("Erfolgreich geladen, aber keine GPS-Punkte im Array.");
             }
-            logMsg(`Koordinaten empfangen! (${coordsData.items.length} Wegpunkte)`, "success");
+            logMsg(`${coordsData.items.length} Punkte gefunden!`, "success");
 
+            // 3. Karte & Download
             renderMap(coordsData.items);
-
-            const tourName = tourData.name || tourData.title || `Komoot_${isSmartTour ? 'Smarttour' : 'Tour'}_${tourId}`;
-            logMsg(`Schritt 3: Generiere GPX...`, "info");
+            logMsg(`Generiere GPX Datei...`, "info");
             generateAndDownloadGPX(tourName, coordsData.items);
             
-            logMsg("Fertig! GPX Download erfolgreich initiiert.", "success");
+            logMsg("Fertig! Download gestartet.", "success");
             btn.innerText = "Erfolgreich!";
             setTimeout(() => { btn.innerText = "Vorschau & GPX Laden"; }, 3000);
             
         } catch (error) {
-            logMsg(`FEHLER ABBRUCH: ${error.message}`, "error");
-            btn.innerText = "Fehler aufgetreten";
+            logMsg(`FEHLER: ${error.message}`, "error");
+            btn.innerText = "Fehler!";
             setTimeout(() => { btn.innerText = "Vorschau & GPX Laden"; }, 3000);
         } finally {
             btn.disabled = false;
         }
     }
 
+    // --- GPX GENERATOR ---
     function generateAndDownloadGPX(name, items) {
         try {
             const safeName = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -314,10 +317,10 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            logMsg("Download Datei wurde im Browser erzeugt.", "success");
+            logMsg("GPX Datei im Browser erstellt und Download ausgelöst.", "success");
             
         } catch (e) {
-            throw new Error(`GPX-Generierung fehlgeschlagen: ${e.message}`);
+            logMsg(`GPX-Fehler: ${e.message}`, "error");
         }
     }
 </script>
