@@ -217,13 +217,22 @@
         try {
             logMsg('Eingabe: ' + urlInput.substring(0, 40) + '...', "info");
             
-            var match = urlInput.match(/(?:tour|smarttour)/(d+)/);
-            if (!match) {
+            var tourId = "";
+            var isSmartTour = false;
+
+            if (urlInput.indexOf("/smarttour/") > -1) {
+                isSmartTour = true;
+                var parts = urlInput.split("/smarttour/");
+                tourId = parts[1].split("?")[0].split("/")[0].split("#")[0];
+            } else if (urlInput.indexOf("/tour/") > -1) {
+                isSmartTour = false;
+                var parts = urlInput.split("/tour/");
+                tourId = parts[1].split("?")[0].split("/")[0].split("#")[0];
+            }
+
+            if (tourId === "") {
                 throw new Error("Keine gültige Tour-ID in der URL gefunden.");
             }
-            
-            var tourId = match[1];
-            var isSmartTour = urlInput.includes('/smarttour/');
             logMsg('Tour-Typ: ' + (isSmartTour ? 'Smarttour' : 'Normale Tour') + ' (ID: ' + tourId + ')', "success");
             
             var tourApiUrl = '';
