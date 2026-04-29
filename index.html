@@ -79,7 +79,7 @@
         <h1>Komoot 2 GPX</h1>
     </div>
     <div class="meta-header">
-        v2.7 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a>
+        v2.8 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a>
     </div>
     
     <button type="button" id="installAppBtn">
@@ -99,7 +99,7 @@
     
     <div id="debug-console">
         <div class="log-system">user@komoot-exporter:~$ init engine</div>
-        <div class="log-info">> System ready. 8 Proxy-Fallbacks loaded.</div>
+        <div class="log-info">> System ready. Anti-Blocker Engine v2.8 loaded.</div>
     </div>
     
     <div id="map-container"></div>
@@ -147,20 +147,18 @@
     }
 
     // ==========================================
-    // ULTIMATIVE 8-FACH PROXY ENGINE
+    // ULTIMATIVE PROXY ENGINE (Mit Wrapper & 406-Fix)
     // ==========================================
     var PROXY_LIST = [
-        // 1. Direkte API (Klappt, wenn Komoot CORS-Regeln lockert oder User eine Chrome-Extension nutzt)
-        { name: "Direct API (No Proxy)", url: function(u) { return u; } },
-        // 2. High-Speed Proxys
-        { name: "cors.sh", url: function(u) { return 'https://proxy.cors.sh/' + u; } },
-        { name: "allorigins", url: function(u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); } },
-        { name: "cors.x2u.in", url: function(u) { return 'https://cors.x2u.in/?' + encodeURIComponent(u); } },
-        { name: "codetabs", url: function(u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
+        // 1. "Wrapped" Modus umgeht Adblocker/iodéOS Sperren!
+        { name: "allorigins (Wrapped)", type: "wrapper", url: function(u) { return 'https://api.allorigins.win/get?url=' + encodeURIComponent(u); } },
+        // 2. Direkte API (Jetzt mit repariertem Header gegen 406-Fehler)
+        { name: "Direct API", type: "raw", url: function(u) { return u; } },
         // 3. Fallbacks
-        { name: "corsproxy.io", url: function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); } },
-        { name: "thingproxy", url: function(u) { return 'https://thingproxy.freeboard.io/fetch/' + u; } },
-        { name: "cors.lol", url: function(u) { return 'https://api.cors.lol/?url=' + encodeURIComponent(u); } }
+        { name: "corsproxy.io", type: "raw", url: function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); } },
+        { name: "cors.sh", type: "raw", url: function(u) { return 'https://proxy.cors.sh/' + u; } },
+        { name: "codetabs", type: "raw", url: function(u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
+        { name: "cors.x2u.in", type: "raw", url: function(u) { return 'https://cors.x2u.in/?' + encodeURIComponent(u); } }
     ];
 
     async function fetchWithFallbacks(targetUrl, contextName) {
@@ -173,15 +171,15 @@
             logMsg('> Trying ' + proxy.name + '...', "info");
             
             try {
-                // Striktes 10-Sekunden Timeout, damit defekte Proxys die App nicht einfrieren
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 10000);
+                const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 Sekunden Killswitch
+
+                // 406-Fehler Fix: Wir fordern ausdrücklich das richtige JSON Format an
+                var reqHeaders = { 'Accept': 'application/hal+json, application/json, */*' };
+                if (proxy.name === 'cors.sh') reqHeaders['x-cors-api-key'] = 'temp_81f0b093380c2f8f8ed97405d4142f74';
 
                 var response = await fetch(proxyUrl, { 
-                    headers: { 
-                        'Accept': 'application/json',
-                        'x-cors-api-key': 'temp_81f0b093380c2f8f8ed97405d4142f74' // Frei für cors.sh
-                    }, 
+                    headers: reqHeaders, 
                     cache: 'no-store',
                     signal: controller.signal
                 });
@@ -190,22 +188,29 @@
 
                 if (!response.ok) throw new Error('HTTP ' + response.status);
                 
-                var text = await response.text();
-                if (text.trim().startsWith('<')) throw new Error("Blocked (Returned HTML)");
-                
-                var data = JSON.parse(text);
+                var data;
+                if (proxy.type === "wrapper") {
+                    // Entpackt das spezielle AllOrigins Wrapper-Format (Gegen Adblocker)
+                    var wrapper = await response.json();
+                    if (!wrapper.contents) throw new Error("Empty wrapper contents");
+                    data = JSON.parse(wrapper.contents);
+                } else {
+                    var text = await response.text();
+                    if (text.trim().startsWith('<')) throw new Error("Blocked (Returned HTML)");
+                    data = JSON.parse(text);
+                }
                 
                 // Auffällige Erfolgsmeldung im Log
                 logMsg('⭐ SUCCESS! ' + contextName + ' loaded via ' + proxy.name + ' ⭐', "success");
                 return data;
 
             } catch (err) {
-                var errMsg = err.name === 'AbortError' ? "Timeout (>10s)" : err.message;
+                var errMsg = err.name === 'AbortError' ? "Timeout (>12s)" : err.message;
                 logMsg('× ' + proxy.name + ' failed: ' + errMsg, "warning");
                 lastError = errMsg;
             }
         }
-        throw new Error('All ' + PROXY_LIST.length + ' routes dead. Last error: ' + lastError);
+        throw new Error('All routes dead. Last error: ' + lastError);
     }
 
     function renderMap(coords) {
