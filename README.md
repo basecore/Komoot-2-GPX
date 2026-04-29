@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/readme-banner.svg" alt="Komoot 2 GPX Banner" width="100%">
+  <img src="image/readme-banner.svg" alt="Komoot 2 GPX Banner" width="100%">
 </p>
 
 # Komoot-2-GPX Exporter 🚴‍♂️⛰️
