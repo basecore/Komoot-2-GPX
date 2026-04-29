@@ -1,5 +1,5 @@
 {
-  "name": "Komoot GPX",
+  "name": "Komoot 2 GPX",
   "short_name": "GPX Export",
   "description": "Lädt Komoot-Touren als GPX herunter",
   "start_url": "./index.html",
@@ -12,5 +12,14 @@
       "sizes": "512x512",
       "type": "image/png"
     }
-  ]
+  ],
+  "share_target": {
+    "action": "./index.html",
+    "method": "GET",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url"
+    }
+  }
 }
