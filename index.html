@@ -79,7 +79,7 @@
         <h1>Komoot 2 GPX</h1>
     </div>
     <div class="meta-header">
-        v2.8 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a>
+        v2.9 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a>
     </div>
     
     <button type="button" id="installAppBtn">
@@ -99,7 +99,7 @@
     
     <div id="debug-console">
         <div class="log-system">user@komoot-exporter:~$ init engine</div>
-        <div class="log-info">> System ready. Anti-Blocker Engine v2.8 loaded.</div>
+        <div class="log-info">> System ready. Share API active.</div>
     </div>
     
     <div id="map-container"></div>
@@ -147,14 +147,11 @@
     }
 
     // ==========================================
-    // ULTIMATIVE PROXY ENGINE (Mit Wrapper & 406-Fix)
+    // ULTIMATIVE PROXY ENGINE 
     // ==========================================
     var PROXY_LIST = [
-        // 1. "Wrapped" Modus umgeht Adblocker/iodéOS Sperren!
         { name: "allorigins (Wrapped)", type: "wrapper", url: function(u) { return 'https://api.allorigins.win/get?url=' + encodeURIComponent(u); } },
-        // 2. Direkte API (Jetzt mit repariertem Header gegen 406-Fehler)
         { name: "Direct API", type: "raw", url: function(u) { return u; } },
-        // 3. Fallbacks
         { name: "corsproxy.io", type: "raw", url: function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); } },
         { name: "cors.sh", type: "raw", url: function(u) { return 'https://proxy.cors.sh/' + u; } },
         { name: "codetabs", type: "raw", url: function(u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } },
@@ -172,9 +169,8 @@
             
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 12000); // 12 Sekunden Killswitch
+                const timeoutId = setTimeout(() => controller.abort(), 12000); 
 
-                // 406-Fehler Fix: Wir fordern ausdrücklich das richtige JSON Format an
                 var reqHeaders = { 'Accept': 'application/hal+json, application/json, */*' };
                 if (proxy.name === 'cors.sh') reqHeaders['x-cors-api-key'] = 'temp_81f0b093380c2f8f8ed97405d4142f74';
 
@@ -190,7 +186,6 @@
                 
                 var data;
                 if (proxy.type === "wrapper") {
-                    // Entpackt das spezielle AllOrigins Wrapper-Format (Gegen Adblocker)
                     var wrapper = await response.json();
                     if (!wrapper.contents) throw new Error("Empty wrapper contents");
                     data = JSON.parse(wrapper.contents);
@@ -200,7 +195,6 @@
                     data = JSON.parse(text);
                 }
                 
-                // Auffällige Erfolgsmeldung im Log
                 logMsg('⭐ SUCCESS! ' + contextName + ' loaded via ' + proxy.name + ' ⭐', "success");
                 return data;
 
@@ -243,6 +237,7 @@
         logMsg('Stats: ' + items.length + ' pts | ' + distKm, "info");
         
         var safeName = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var filename = name.replace(/[^a-z0-9äöüß]/gi, '_').toLowerCase() + '.gpx';
         
         var lines = [];
         lines.push('<?xml version="1.0" encoding="UTF-8"?>');
@@ -264,11 +259,23 @@
             var blob = new Blob([gpxString], { type: "application/gpx+xml" });
             var link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
-            link.download = name.replace(/[^a-z0-9äöüß]/gi, '_').toLowerCase() + '.gpx';
+            link.download = filename;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
+            
             logMsg("Download triggered!", "success");
+            
+            // NEU: Native System-Benachrichtigung für den Benutzer
+            setTimeout(() => {
+                alert(`✅ Download Complete!
+
+File saved as:
+"${filename}"
+
+Check your device's "Downloads" folder to open the GPX file.`);
+            }, 500);
+
         } catch(e) {
             logMsg('Download Error: ' + e.message, "error");
         }
@@ -302,16 +309,34 @@
             if (tourId === "") throw new Error("Invalid URL format");
             logMsg('Target: ID ' + tourId + ' (' + (isSmartTour ? 'Smart' : 'Standard') + ')', "info");
             
-            // Umgehung von Subdomain-Sperren: Wir rufen die Web-API statt die Subdomain-API auf
             var tourApiUrl = isSmartTour ? 'https://www.komoot.de/api/v007/discover_tours/' + tourId : 'https://www.komoot.de/api/v007/tours/' + tourId;
             var coordsApiUrl = isSmartTour ? 'https://www.komoot.de/api/v007/smart_tours/' + tourId + '/coordinates' : 'https://www.komoot.de/api/v007/tours/' + tourId + '/coordinates';
 
             var tourData = await fetchWithFallbacks(tourApiUrl, "Metadata");
+            
+            // NEU: Erweiterte Fehlerbehandlung für private Touren bei Metadaten
+            if (tourData.error) {
+                if (tourData.error === "AccessDenied" || tourData.error === "PrivateTour") {
+                     throw new Error("Access Denied: This tour is set to PRIVATE.");
+                }
+                throw new Error("API Error: " + tourData.error);
+            }
+
             var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
             var tourDistance = tourData.distance || 0; 
             
             var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
-            if (!coordsData.items || coordsData.items.length === 0) throw new Error("No GPS data found");
+            
+            // NEU: Erweiterte Fehlerbehandlung für private Touren bei Koordinaten
+            if (coordsData.error) {
+                if (coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
+                     throw new Error("Access Denied: This tour is set to PRIVATE.");
+                }
+                throw new Error("API Error: " + coordsData.error);
+            }
+            if (!coordsData.items || coordsData.items.length === 0) {
+                throw new Error("No GPS data found. The tour might be PRIVATE or empty.");
+            }
             
             renderMap(coordsData.items);
             generateGPX(tourName, coordsData.items, tourDistance);
@@ -321,6 +346,13 @@
         } catch (error) {
             logMsg('ABORT: ' + error.message, "error");
             btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> Failed`;
+            
+            // Bei Fehler auch ein Alert zeigen, wenn die App im Hintergrund via "Share" getriggert wurde
+            if (document.getElementById('tourUrl').value.indexOf('?shared=true') > -1) {
+                alert("❌ Download Failed
+
+" + error.message);
+            }
         } finally {
             setTimeout(function() { 
                 btn.disabled = false; 
@@ -353,7 +385,8 @@
             if (cleanUrl !== "") {
                 var urlInput = document.getElementById('tourUrl');
                 if (urlInput) {
-                    urlInput.value = cleanUrl;
+                    // Markiere die URL mit einem Parameter, damit wir wissen, dass sie geteilt wurde
+                    urlInput.value = cleanUrl + "?shared=true"; 
                     logMsg("Share Target active. Booting sequence...", "system");
                     setTimeout(function() { startExport(); }, 1000);
                 }
