@@ -17,12 +17,14 @@ A lightweight, purely client-side Progressive Web App (PWA) to quickly download 
   <img src="image/screenshot2.png" alt="Map Preview Screenshot" width="45%">
 </p>
 
-## ✨ Features (v2.9 Pro)
+## ✨ Features (v3.1 Pro)
 
-* **🚀 Native Android "Share" Integration:** Through the Web Share Target API, this app seamlessly integrates into your smartphone's OS. Hit "Share -> Other Apps" inside the official Komoot app, select "Komoot 2 GPX", and the PWA will instantly launch, grab the link, and auto-start the GPX download. No copy-pasting required!
+* **🚀 Native Android "Share" Integration:** Through the Web Share Target API, this app seamlessly integrates into your smartphone's OS. Hit "Share -> Other Apps" inside the official Komoot app, select "Komoot 2 GPX", and the PWA will instantly launch, grab the link, and auto-start the GPX download in the background. No copy-pasting required!
+* **📂 "Open in App" Routing:** Once the GPX file is downloaded, a dynamic button appears that leverages the native device Share API. This allows you to instantly push the downloaded file into your favorite offline navigation app (e.g., OsmAnd, Garmin Connect, Locus Map).
+* **🔒 Private Tour Detection:** Intelligently detects if a shared tour is restricted or private and provides clear, descriptive feedback in the console instead of generic API errors.
 * **🛡️ Anti-Adblocker Engine ("Wrapped" Mode):** Bypasses aggressive network adblockers (like the ones built into iodéOS) using a specialized data wrapper to securely fetch coordinates without getting blocked.
 * **🔧 HTTP 406 Bypass:** Injects custom `application/hal+json` headers to prevent Komoot's direct API from rejecting the fetch requests.
-* **🎨 Pro UI & Live Debug Console:** A beautiful, responsive card-based interface with smooth animations, custom SVG icons, and a developer-grade terminal window that shows you exactly what the app is currently doing.
+* **🎨 Pro UI & Live Debug Console:** A beautiful, responsive card-based interface with smooth animations, custom SVG icons, and a developer-grade terminal window that shows you exactly what the app is currently doing and where files are saved.
 * **🔄 Smarttour & Discovery Support:** Automatically detects whether you pasted a regular user tour (`/tour/`) or a generated Komoot collection (`/smarttour/`) and routes API calls accordingly.
 * **🌐 8-Layer Proxy Fallback Engine:** Since Komoot strictly blocks public CORS proxies, this app features a robust, automated rotation of 8 independent proxy servers. If one proxy fails, it instantly switches to the next one—ensuring maximum uptime.
 * **🗺️ Interactive Leaflet Map:** Displays the exact route on an OpenStreetMap interface before the download begins, allowing you to visually verify the tour.
