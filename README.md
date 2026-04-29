@@ -11,19 +11,19 @@ A lightweight, purely client-side Progressive Web App (PWA) to quickly download 
 
 👉 **[Launch Web App](https://basecore.github.io/Komoot-2-GPX/)**
 
-## ✨ Features (v2.4 Pro)
+## ✨ Features (v2.7 Pro)
 
 * **🚀 Native Android "Share" Integration:** Through the Web Share Target API, this app seamlessly integrates into your smartphone's OS. Hit "Share -> Other Apps" inside the official Komoot app, select "Komoot 2 GPX", and the PWA will instantly launch, grab the link, and auto-start the GPX download. No copy-pasting required!
 * **🎨 Pro UI & Glassmorphism:** A beautiful, responsive card-based interface with smooth animations, custom SVG icons, and a developer-grade terminal window.
 * **🔄 Smarttour & Discovery Support:** Automatically detects whether you pasted a regular user tour (`/tour/`) or a generated Komoot collection (`/smarttour/`) and routes API calls accordingly.
-* **🛡️ Proxy Fallback Engine:** Since Komoot strictly blocks public CORS proxies, this app features a built-in rotation of independent proxy servers. If one proxy is blocked, it instantly switches to the next one—ensuring maximum uptime.
+* **🛡️ 8-Layer Proxy Fallback Engine:** Since Komoot strictly blocks public CORS proxies, this app features a robust, automated rotation of 8 independent proxy servers (including direct API fallback and 10-second timeout killswitches). If one proxy is blocked, it instantly switches to the next one—ensuring maximum uptime.
 * **🗺️ Interactive Leaflet Map:** Displays the exact route on an OpenStreetMap interface before the download begins, allowing you to visually verify the tour.
 * **⌚ Garmin-Ready Data:** Generates 100% compliant XML/GPX files containing both elevation (`<ele>`) and precise timestamps (`<time>`), which are mandatory for activity tracking in Garmin Connect.
 * **📱 100% PWA Installable:** Meets Chrome's strict install criteria (including maskable icons). Install it directly on your home screen (Android/iOS) via the built-in "Install App" button to use it like a native app in full-screen mode.
 
 ## 📱 How to Use (Smartphone & Desktop)
 
-### Option A: The "Pro" Workflow (Android / IodeOS)
+### Option A: The "Pro" Workflow (Android / iodéOS / LineageOS)
 1. Open the [Komoot-2-GPX App](https://basecore.github.io/Komoot-2-GPX/) in Chrome, Brave, or Kiwi Browser.
 2. Click the blue **"📱 Install App on Device"** button (or use the browser menu to "Add to Home Screen").
 3. Open your official Komoot app and find a public tour.
