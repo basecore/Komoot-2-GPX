@@ -8,44 +8,197 @@
     <meta name="theme-color" content="#1e2124">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
     
     <style>
         :root {
-            --bg-color: #f4f4f9; --text-color: #333; --box-bg: #fff;
-            --primary: #97b536; --primary-hover: #7a942a;
-            --install: #3498db; --install-hover: #2980b9;
-            --error: #ff4444; --warning: #f39c12; --debug-bg: #111;
+            --bg-color: #121416; 
+            --card-bg: #1e2124;
+            --input-bg: #2c2f33;
+            --text-main: #ffffff;
+            --text-muted: #a0a5a9;
+            --primary: #97b536; 
+            --primary-hover: #86a32d;
+            --install: #3498db; 
+            --install-hover: #2980b9;
+            --console-bg: #0d0f11;
+            --border-radius: 16px;
         }
-        @media (prefers-color-scheme: dark) {
-            :root { --bg-color: #1e2124; --text-color: #f4f4f9; --box-bg: #2c2f33; }
-        }
-        body { font-family: -apple-system, sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 20px; }
-        .container { background: var(--box-bg); padding: 20px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
-        h1 { text-align: center; margin-top: 0; font-size: 22px; margin-bottom: 5px; }
-        
-        .meta-header { text-align: center; font-size: 12px; color: #888; margin-bottom: 15px; line-height: 1.5; }
-        .meta-header a { color: var(--primary); text-decoration: none; font-weight: bold; }
-        
-        /* Der neue Installations-Button */
-        #installAppBtn { width: 100%; padding: 12px; background: var(--install); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 15px; display: none; }
-        #installAppBtn:hover { background: var(--install-hover); }
 
-        input[type="url"] { width: 100%; padding: 15px; margin-bottom: 10px; border: 1px solid #555; border-radius: 8px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); font-size: 16px;}
-        button.main-btn { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background 0.2s;}
-        button.main-btn:disabled { background: #555; cursor: not-allowed; }
-        
-        #debug-console {
-            margin-top: 20px; padding: 10px; background: var(--debug-bg); color: #fff;
-            border-radius: 6px; font-family: monospace; font-size: 12px; height: 180px; 
-            overflow-y: auto; word-break: break-all; border: 2px solid #444;
+        * { box-sizing: border-box; }
+
+        body { 
+            font-family: 'Inter', -apple-system, sans-serif; 
+            background: var(--bg-color); 
+            color: var(--text-main); 
+            margin: 0; 
+            padding: 20px; 
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
         }
-        .log-info { color: #88ccff; margin-bottom: 3px; }
-        .log-success { color: #00ff00; font-weight: bold; margin-bottom: 3px; }
-        .log-warning { color: #ffaa00; margin-bottom: 3px; }
-        .log-error { color: #ffffff; background: #cc0000; font-weight: bold; padding: 3px; margin-bottom: 3px; border-radius: 3px; }
-        .log-system { color: #ff00ff; font-weight: bold; margin-bottom: 3px; }
+
+        .container { 
+            background: var(--card-bg); 
+            padding: 30px; 
+            border-radius: var(--border-radius); 
+            width: 100%;
+            max-width: 550px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); 
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-top: 2vh;
+        }
+
+        .header-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 5px;
+        }
+
+        .app-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        h1 { 
+            margin: 0; 
+            font-size: 26px; 
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
         
-        #map-container { width: 100%; height: 250px; margin-top: 20px; border-radius: 8px; display: none; border: 2px solid var(--primary); }
+        .meta-header { 
+            text-align: center; 
+            font-size: 13px; 
+            color: var(--text-muted); 
+            margin-bottom: 25px; 
+            font-weight: 400;
+        }
+        
+        .meta-header a { color: var(--primary); text-decoration: none; font-weight: 600; transition: color 0.2s;}
+        .meta-header a:hover { color: #ffffff; }
+
+        /* Buttons */
+        button {
+            width: 100%; 
+            padding: 16px; 
+            border: none; 
+            border-radius: 12px; 
+            font-size: 16px; 
+            font-weight: 600; 
+            cursor: pointer; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            font-family: inherit;
+        }
+
+        button svg { width: 20px; height: 20px; fill: currentColor; }
+
+        #installAppBtn { 
+            background: var(--install); 
+            color: white; 
+            margin-bottom: 20px; 
+            display: none; 
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+        #installAppBtn:hover { background: var(--install-hover); transform: translateY(-2px); }
+
+        .main-btn { 
+            background: var(--primary); 
+            color: white; 
+            box-shadow: 0 4px 15px rgba(151, 181, 54, 0.2);
+        }
+        .main-btn:hover:not(:disabled) { 
+            background: var(--primary-hover); 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(151, 181, 54, 0.4);
+        }
+        .main-btn:disabled { 
+            background: #444; 
+            color: #888;
+            cursor: not-allowed; 
+            box-shadow: none;
+            transform: none;
+        }
+
+        /* Input */
+        .input-group { position: relative; margin-bottom: 15px; }
+        input[type="url"] { 
+            width: 100%; 
+            padding: 16px 16px 16px 45px; 
+            border: 2px solid transparent; 
+            border-radius: 12px; 
+            background: var(--input-bg); 
+            color: white; 
+            font-size: 15px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+        input[type="url"]::placeholder { color: #666; }
+        input[type="url"]:focus { border-color: var(--primary); background: #232528; }
+        
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            fill: #666;
+            pointer-events: none;
+        }
+        input[type="url"]:focus + .input-icon { fill: var(--primary); }
+
+        /* Console */
+        #debug-console {
+            margin-top: 25px; 
+            padding: 15px; 
+            background: var(--console-bg); 
+            border-radius: 10px; 
+            font-family: 'Courier New', Courier, monospace; 
+            font-size: 12px; 
+            height: 160px; 
+            overflow-y: auto; 
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            line-height: 1.5;
+        }
+        
+        /* Custom Scrollbar for Console */
+        #debug-console::-webkit-scrollbar { width: 6px; }
+        #debug-console::-webkit-scrollbar-track { background: transparent; }
+        #debug-console::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
+        #debug-console::-webkit-scrollbar-thumb:hover { background: #666; }
+
+        .log-info { color: #8bb4e7; }
+        .log-success { color: #97b536; font-weight: bold; }
+        .log-warning { color: #f1c40f; }
+        .log-error { color: #ff5252; font-weight: bold; }
+        .log-system { color: #bd93f9; font-weight: bold; margin-bottom: 5px; border-bottom: 1px dashed rgba(189, 147, 249, 0.3); padding-bottom: 3px;}
+
+        /* Map */
+        #map-container { 
+            width: 100%; 
+            height: 250px; 
+            margin-top: 20px; 
+            border-radius: 12px; 
+            display: none; 
+            border: 2px solid rgba(255,255,255,0.1);
+            opacity: 0;
+            transition: opacity 0.5s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 1; /* Fix for leaflet overlapping */
+        }
+        #map-container.visible { opacity: 1; display: block; }
     </style>
 
     <script>
@@ -56,29 +209,40 @@
         };
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(function() {
-                console.log('SW ok');
-            });
+            navigator.serviceWorker.register('sw.js').then(() => console.log('SW ok'));
         }
     </script>
 </head>
 <body>
 
 <div class="container">
-    <h1>Komoot 2 GPX</h1>
+    <div class="header-wrapper">
+        <!-- Lädt das Icon, das wir vorhin festgelegt haben -->
+        <img src="icon-512.png" alt="Logo" class="app-logo" onerror="this.style.display='none'">
+        <h1>Komoot 2 GPX</h1>
+    </div>
     <div class="meta-header">
-        v2.3 (PWA Installer) | 28.04.2026 | by basecore<br>
-        <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">View on GitHub</a>
+        v2.4 Pro | Developed by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a>
     </div>
     
-    <!-- Hier erscheint der Button, wenn die App noch nicht installiert ist -->
-    <button type="button" id="installAppBtn">📱 Install App on Device</button>
+    <button type="button" id="installAppBtn">
+        <svg viewBox="0 0 24 24"><path d="M17 1.01L7 .99C5.9 .99 5 1.9 5 3v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14zm-1 2H8v-1h8v1z"/></svg>
+        Install App on Device
+    </button>
     
-    <input type="url" id="tourUrl" placeholder="Paste Komoot URL (e.g. komoot.de/tour/123)" autocomplete="off">
-    <button type="button" id="downloadBtn" class="main-btn">Preview & Download GPX</button>
+    <div class="input-group">
+        <input type="url" id="tourUrl" placeholder="Paste Komoot URL (e.g. komoot.de/tour/123)" autocomplete="off">
+        <svg class="input-icon" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+    </div>
+
+    <button type="button" id="downloadBtn" class="main-btn">
+        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+        Preview & Download GPX
+    </button>
     
     <div id="debug-console">
-        <div class="log-system">=== SYSTEM READY ===</div>
+        <div class="log-system">user@komoot-exporter:~$ init engine</div>
+        <div class="log-info">> System ready. Awaiting URL...</div>
     </div>
     
     <div id="map-container"></div>
@@ -91,50 +255,41 @@
     var trackLayer = null;
 
     // ==========================================
-    // PWA INSTALLATIONS-LOGIK
+    // PWA INSTALLATION
     // ==========================================
     let deferredPrompt;
     const installBtn = document.getElementById('installAppBtn');
 
     window.addEventListener('beforeinstallprompt', function(e) {
-        // Verhindert, dass Chrome sofort sein eigenes Mini-Popup zeigt
         e.preventDefault();
-        // Speichere das Event für später
         deferredPrompt = e;
-        // Zeige unseren eigenen, großen blauen Button!
-        installBtn.style.display = 'block';
+        installBtn.style.display = 'flex';
     });
 
     installBtn.addEventListener('click', async function() {
         if (deferredPrompt !== null) {
-            // Zeige den nativen Chrome Installations-Dialog an
             deferredPrompt.prompt();
-            // Warte auf die Antwort des Nutzers
             const { outcome } = await deferredPrompt.userChoice;
-            if (outcome === 'accepted') {
-                console.log('User accepted the install prompt');
-            }
+            if (outcome === 'accepted') console.log('Install accepted');
             deferredPrompt = null;
-            // Verstecke den Button wieder
             installBtn.style.display = 'none';
         }
     });
 
     window.addEventListener('appinstalled', function() {
         installBtn.style.display = 'none';
-        logMsg("App was successfully installed!", "success");
+        logMsg("App installed successfully!", "success");
     });
 
-
     // ==========================================
-    // HAUPT-LOGIK
+    // LOGIC
     // ==========================================
     function logMsg(message, type) {
         if (!type) type = 'info';
         var consoleDiv = document.getElementById('debug-console');
         if (!consoleDiv) return;
         var time = new Date().toTimeString().split(' ')[0];
-        consoleDiv.innerHTML += '<div class="log-' + type + '">[' + time + '] ' + message + '</div>';
+        consoleDiv.innerHTML += '<div class="log-' + type + '"><span style="opacity:0.5">[' + time + ']</span> ' + message + '</div>';
         consoleDiv.scrollTop = consoleDiv.scrollHeight;
     }
 
@@ -152,7 +307,7 @@
         for (var i = 0; i < PROXY_LIST.length; i++) {
             var proxy = PROXY_LIST[i];
             var proxyUrl = proxy.url(targetUrl);
-            logMsg('Routing via [' + proxy.name + ']...', "info");
+            logMsg('> Routing via ' + proxy.name + '...', "info");
             
             try {
                 var response = await fetch(proxyUrl, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
@@ -162,20 +317,20 @@
                 if (text.trim().startsWith('<')) throw new Error("Returned HTML (Proxy blocked)");
                 
                 var data = JSON.parse(text);
-                logMsg('Success! ' + contextName + ' loaded via ' + proxy.name, "success");
+                logMsg('✓ ' + contextName + ' OK', "success");
                 return data;
             } catch (err) {
-                logMsg('Proxy [' + proxy.name + '] failed: ' + err.message, "warning");
+                logMsg('× ' + proxy.name + ' failed', "warning");
                 lastError = err.message;
             }
         }
-        throw new Error('All proxies failed. Last error: ' + lastError);
+        throw new Error('All proxies dead. Last error: ' + lastError);
     }
 
     function renderMap(coords) {
         try {
             var mapDiv = document.getElementById('map-container');
-            mapDiv.style.display = 'block';
+            mapDiv.classList.add('visible'); // Nutzt die CSS Animation
             
             if (!map) {
                 map = L.map('map-container');
@@ -186,11 +341,11 @@
             var latLngs = [];
             for (var i = 0; i < coords.length; i++) latLngs.push([coords[i].lat, coords[i].lng]);
 
-            trackLayer = L.polyline(latLngs, { color: '#97b536', weight: 4 }).addTo(map);
+            trackLayer = L.polyline(latLngs, { color: '#97b536', weight: 4, lineCap: 'round', lineJoin: 'round' }).addTo(map);
             map.fitBounds(trackLayer.getBounds());
             
             setTimeout(function() { map.invalidateSize(); }, 300);
-            logMsg("Map rendered successfully.", "success");
+            logMsg("Map rendering complete", "info");
         } catch(e) {
             logMsg('Map Error: ' + e.message, "error");
         }
@@ -198,8 +353,8 @@
 
     function generateGPX(name, items, distance) {
         var distKm = distance ? (distance / 1000).toFixed(2) + " km" : "Unknown length";
-        logMsg('Compiling GPX File...', "info");
-        logMsg('Track Info: ' + items.length + ' waypoints | ' + distKm, "system");
+        logMsg('Compiling GPX...', "system");
+        logMsg('Stats: ' + items.length + ' pts | ' + distKm, "info");
         
         var safeName = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         
@@ -232,7 +387,7 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            logMsg("GPX Download triggered!", "success");
+            logMsg("Download triggered!", "success");
         } catch(e) {
             logMsg('Download Error: ' + e.message, "error");
         }
@@ -241,23 +396,21 @@
     async function startExport() {
         var urlInput = document.getElementById('tourUrl').value.trim();
         var btn = document.getElementById('downloadBtn');
-        var mapDiv = document.getElementById('map-container');
         var consoleDiv = document.getElementById('debug-console');
+        var mapDiv = document.getElementById('map-container');
         
-        consoleDiv.innerHTML = '<div class="log-system">=== NEW EXPORT STARTED ===</div>';
-        mapDiv.style.display = 'none';
+        consoleDiv.innerHTML = '<div class="log-system">user@komoot-exporter:~$ start --url</div>';
+        mapDiv.classList.remove('visible');
 
         if (!urlInput) {
-            logMsg("Please enter a URL first!", "error");
+            logMsg("Error: Please provide a URL", "error");
             return;
         }
 
         btn.disabled = true;
-        btn.innerText = "Processing...";
+        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Processing...`;
 
         try {
-            logMsg('Input: ' + urlInput.substring(0, 45) + '...', "info");
-            
             var tourId = "";
             var isSmartTour = false;
 
@@ -269,7 +422,9 @@
                 tourId = urlInput.split("/tour/")[1].split("?")[0].split("/")[0].split("#")[0];
             }
 
-            if (tourId === "") throw new Error("No valid Tour-ID found in the URL.");
+            if (tourId === "") throw new Error("Invalid URL format");
+            
+            logMsg('Target: ID ' + tourId + ' (' + (isSmartTour ? 'Smart' : 'Standard') + ')', "info");
             
             var tourApiUrl = isSmartTour ? 'https://api.komoot.de/v007/discover_tours/' + tourId : 'https://api.komoot.de/v007/tours/' + tourId;
             var coordsApiUrl = isSmartTour ? 'https://api.komoot.de/v007/smart_tours/' + tourId + '/coordinates' : 'https://api.komoot.de/v007/tours/' + tourId + '/coordinates';
@@ -279,21 +434,20 @@
             var tourDistance = tourData.distance || 0; 
             
             var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
-            if (!coordsData.items || coordsData.items.length === 0) throw new Error("No GPS waypoints received.");
+            if (!coordsData.items || coordsData.items.length === 0) throw new Error("No GPS data found");
             
             renderMap(coordsData.items);
             generateGPX(tourName, coordsData.items, tourDistance);
             
-            logMsg("PROCESS COMPLETED SUCCESSFULLY", "success");
-            btn.innerText = "Success!";
+            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Success!`;
             
         } catch (error) {
-            logMsg('ABORTED: ' + error.message, "error");
-            btn.innerText = "Error!";
+            logMsg('ABORT: ' + error.message, "error");
+            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> Failed`;
         } finally {
             setTimeout(function() { 
                 btn.disabled = false; 
-                btn.innerText = "Preview & Download GPX"; 
+                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Preview & Download GPX`;
             }, 3000);
         }
     }
@@ -323,7 +477,7 @@
                 var urlInput = document.getElementById('tourUrl');
                 if (urlInput) {
                     urlInput.value = cleanUrl;
-                    logMsg("URL grabbed from Android Share. Starting...", "info");
+                    logMsg("Share Target active. Booting sequence...", "system");
                     setTimeout(function() { startExport(); }, 1000);
                 }
             }
