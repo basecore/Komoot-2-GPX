@@ -288,6 +288,43 @@
         } else {
             logMsg("CRITICAL: Button not found in DOM!", "error");
         }
+
+        // ==========================================
+        // AUTO-START FÜR ANDROID "TEILEN"-MENÜ
+        // ==========================================
+        try {
+            var urlParams = new URLSearchParams(window.location.search);
+            
+            // Komoot teilt Links oft im Feld 'text' (mit Beschreibungen) oder im Feld 'url'
+            var sharedText = urlParams.get('text') || "";
+            var sharedUrl = urlParams.get('url') || "";
+            
+            // Kombiniere alles, was wir bekommen haben
+            var combinedShare = sharedText + " " + sharedUrl;
+            
+            // Suche mit Regex nach einem echten Komoot-Link in dem geteilten Text
+            var linkMatch = combinedShare.match(/https?://(www.)?komoot.[a-z]+/(tour|smarttour)/d+/);
+            
+            if (linkMatch && linkMatch[0]) {
+                var cleanUrl = linkMatch[0];
+                logMsg("App über 'Teilen'-Menü geöffnet!", "system");
+                
+                var urlInput = document.getElementById('tourUrl');
+                if (urlInput) {
+                    // Trage den Link ins Feld ein
+                    urlInput.value = cleanUrl;
+                    logMsg("URL automatisch eingefügt: " + cleanUrl, "success");
+                    logMsg("Starte automatischen GPX-Download...", "info");
+                    
+                    // Starte den Export automatisch nach 1 Sekunde
+                    setTimeout(function() {
+                        startExport();
+                    }, 1000);
+                }
+            }
+        } catch(e) {
+            logMsg("Auto-Start Fehler: " + e.message, "warning");
+        }
     });
 
 </script>
