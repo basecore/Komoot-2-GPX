@@ -1,12 +1,31 @@
-self.addEventListener('install', function(e) {
+const CACHE_NAME = 'komoot-gpx-v3.0-nuke';
+
+// Sofort aktivieren
+self.addEventListener('install', (event) => {
     self.skipWaiting();
 });
 
-self.addEventListener('activate', function(e) {
-    e.waitUntil(clients.claim());
+// Beim Aktivieren ALLE alten Caches restlos löschen
+self.addEventListener('activate', (event) => {
+    event.waitUntil(
+        caches.keys().then((cacheNames) => {
+            return Promise.all(
+                cacheNames.map((cacheName) => {
+                    if (cacheName !== CACHE_NAME) {
+                        console.log('Lösche alten Cache:', cacheName);
+                        return caches.delete(cacheName);
+                    }
+                })
+            );
+        }).then(() => self.clients.claim())
+    );
 });
 
-self.addEventListener('fetch', function(e) {
-    // Dieser leere Fetch-Befehl ist zwingend nötig, 
-    // damit Chrome den "App Installieren" Button anzeigt!
+// Netzwerk IMMER bevorzugen (Network-First)
+self.addEventListener('fetch', (event) => {
+    event.respondWith(
+        fetch(event.request).catch(() => {
+            return caches.match(event.request);
+        })
+    );
 });
