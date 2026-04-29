@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Komoot 2 GPX Exporter</title>
-    <meta name="theme-color" content="#1e2124">
     <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1e2124">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     
@@ -13,6 +13,7 @@
         :root {
             --bg-color: #f4f4f9; --text-color: #333; --box-bg: #fff;
             --primary: #97b536; --primary-hover: #7a942a;
+            --install: #3498db; --install-hover: #2980b9;
             --error: #ff4444; --warning: #f39c12; --debug-bg: #111;
         }
         @media (prefers-color-scheme: dark) {
@@ -22,13 +23,16 @@
         .container { background: var(--box-bg); padding: 20px; border-radius: 12px; max-width: 600px; margin: 0 auto; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
         h1 { text-align: center; margin-top: 0; font-size: 22px; margin-bottom: 5px; }
         
-        .meta-header { text-align: center; font-size: 12px; color: #888; margin-bottom: 20px; line-height: 1.5; }
+        .meta-header { text-align: center; font-size: 12px; color: #888; margin-bottom: 15px; line-height: 1.5; }
         .meta-header a { color: var(--primary); text-decoration: none; font-weight: bold; }
-        .meta-header a:hover { text-decoration: underline; }
+        
+        /* Der neue Installations-Button */
+        #installAppBtn { width: 100%; padding: 12px; background: var(--install); color: white; border: none; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 15px; display: none; }
+        #installAppBtn:hover { background: var(--install-hover); }
 
         input[type="url"] { width: 100%; padding: 15px; margin-bottom: 10px; border: 1px solid #555; border-radius: 8px; box-sizing: border-box; background: var(--bg-color); color: var(--text-color); font-size: 16px;}
-        button { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background 0.2s;}
-        button:disabled { background: #555; cursor: not-allowed; }
+        button.main-btn { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 8px; font-size: 18px; font-weight: bold; cursor: pointer; transition: background 0.2s;}
+        button.main-btn:disabled { background: #555; cursor: not-allowed; }
         
         #debug-console {
             margin-top: 20px; padding: 10px; background: var(--debug-bg); color: #fff;
@@ -51,14 +55,9 @@
             return false;
         };
 
-        // Service Worker registrieren (zwingend erforderlich für Chrome "App installieren" Dialog)
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('./sw.js').then(function(registration) {
-                    console.log('ServiceWorker erfolgreich registriert!');
-                }).catch(function(err) {
-                    console.log('ServiceWorker Fehler: ', err);
-                });
+            navigator.serviceWorker.register('sw.js').then(function() {
+                console.log('SW ok');
             });
         }
     </script>
@@ -68,13 +67,15 @@
 <div class="container">
     <h1>Komoot 2 GPX</h1>
     <div class="meta-header">
-        v2.2 | Released: 28.04.2026 | by basecore<br>
-        <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">View on GitHub</a> • 
-        <a href="https://github.com/basecore/Komoot-2-GPX/issues" target="_blank">Report Issue</a>
+        v2.3 (PWA Installer) | 28.04.2026 | by basecore<br>
+        <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">View on GitHub</a>
     </div>
     
+    <!-- Hier erscheint der Button, wenn die App noch nicht installiert ist -->
+    <button type="button" id="installAppBtn">📱 Install App on Device</button>
+    
     <input type="url" id="tourUrl" placeholder="Paste Komoot URL (e.g. komoot.de/tour/123)" autocomplete="off">
-    <button type="button" id="downloadBtn">Preview & Download GPX</button>
+    <button type="button" id="downloadBtn" class="main-btn">Preview & Download GPX</button>
     
     <div id="debug-console">
         <div class="log-system">=== SYSTEM READY ===</div>
@@ -89,6 +90,45 @@
     var map = null;
     var trackLayer = null;
 
+    // ==========================================
+    // PWA INSTALLATIONS-LOGIK
+    // ==========================================
+    let deferredPrompt;
+    const installBtn = document.getElementById('installAppBtn');
+
+    window.addEventListener('beforeinstallprompt', function(e) {
+        // Verhindert, dass Chrome sofort sein eigenes Mini-Popup zeigt
+        e.preventDefault();
+        // Speichere das Event für später
+        deferredPrompt = e;
+        // Zeige unseren eigenen, großen blauen Button!
+        installBtn.style.display = 'block';
+    });
+
+    installBtn.addEventListener('click', async function() {
+        if (deferredPrompt !== null) {
+            // Zeige den nativen Chrome Installations-Dialog an
+            deferredPrompt.prompt();
+            // Warte auf die Antwort des Nutzers
+            const { outcome } = await deferredPrompt.userChoice;
+            if (outcome === 'accepted') {
+                console.log('User accepted the install prompt');
+            }
+            deferredPrompt = null;
+            // Verstecke den Button wieder
+            installBtn.style.display = 'none';
+        }
+    });
+
+    window.addEventListener('appinstalled', function() {
+        installBtn.style.display = 'none';
+        logMsg("App was successfully installed!", "success");
+    });
+
+
+    // ==========================================
+    // HAUPT-LOGIK
+    // ==========================================
     function logMsg(message, type) {
         if (!type) type = 'info';
         var consoleDiv = document.getElementById('debug-console');
@@ -102,9 +142,7 @@
         { name: "cors.x2u.in", url: function(u) { return 'https://cors.x2u.in/?' + encodeURIComponent(u); } },
         { name: "cors.lol", url: function(u) { return 'https://api.cors.lol/?url=' + encodeURIComponent(u); } },
         { name: "allorigins.win", url: function(u) { return 'https://api.allorigins.win/raw?url=' + encodeURIComponent(u); } },
-        { name: "corsproxy.io", url: function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); } },
-        { name: "thingproxy", url: function(u) { return 'https://thingproxy.freeboard.io/fetch/' + u; } },
-        { name: "codetabs", url: function(u) { return 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(u); } }
+        { name: "corsproxy.io", url: function(u) { return 'https://corsproxy.io/?' + encodeURIComponent(u); } }
     ];
 
     async function fetchWithFallbacks(targetUrl, contextName) {
@@ -118,25 +156,20 @@
             
             try {
                 var response = await fetch(proxyUrl, { headers: { 'Accept': 'application/json' }, cache: 'no-store' });
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status);
-                }
+                if (!response.ok) throw new Error('HTTP ' + response.status);
                 
                 var text = await response.text();
-                if (text.trim().startsWith('<')) {
-                    throw new Error("Returned HTML (Proxy likely blocked by Komoot)");
-                }
+                if (text.trim().startsWith('<')) throw new Error("Returned HTML (Proxy blocked)");
                 
                 var data = JSON.parse(text);
                 logMsg('Success! ' + contextName + ' loaded via ' + proxy.name, "success");
                 return data;
-
             } catch (err) {
                 logMsg('Proxy [' + proxy.name + '] failed: ' + err.message, "warning");
                 lastError = err.message;
             }
         }
-        throw new Error('All ' + PROXY_LIST.length + ' proxies failed. Last error: ' + lastError);
+        throw new Error('All proxies failed. Last error: ' + lastError);
     }
 
     function renderMap(coords) {
@@ -148,14 +181,10 @@
                 map = L.map('map-container');
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             }
-            if (trackLayer) {
-                map.removeLayer(trackLayer);
-            }
+            if (trackLayer) map.removeLayer(trackLayer);
 
             var latLngs = [];
-            for (var i = 0; i < coords.length; i++) {
-                latLngs.push([coords[i].lat, coords[i].lng]);
-            }
+            for (var i = 0; i < coords.length; i++) latLngs.push([coords[i].lat, coords[i].lng]);
 
             trackLayer = L.polyline(latLngs, { color: '#97b536', weight: 4 }).addTo(map);
             map.fitBounds(trackLayer.getBounds());
@@ -184,12 +213,8 @@
         for (var i = 0; i < items.length; i++) {
             var pt = items[i];
             lines.push('      <trkpt lat="' + pt.lat + '" lon="' + pt.lng + '">');
-            if (pt.alt !== undefined) {
-                lines.push('        <ele>' + pt.alt + '</ele>');
-            }
-            if (pt.t) {
-                lines.push('        <time>' + new Date(pt.t).toISOString() + '</time>');
-            }
+            if (pt.alt !== undefined) lines.push('        <ele>' + pt.alt + '</ele>');
+            if (pt.t) lines.push('        <time>' + new Date(pt.t).toISOString() + '</time>');
             lines.push('      </trkpt>');
         }
         
@@ -244,33 +269,17 @@
                 tourId = urlInput.split("/tour/")[1].split("?")[0].split("/")[0].split("#")[0];
             }
 
-            if (tourId === "") {
-                throw new Error("No valid Tour-ID found in the URL.");
-            }
+            if (tourId === "") throw new Error("No valid Tour-ID found in the URL.");
             
-            logMsg('Tour Type: ' + (isSmartTour ? 'Smarttour' : 'Standard Tour') + ' (ID: ' + tourId + ')', "success");
-            
-            var tourApiUrl = '';
-            var coordsApiUrl = '';
-
-            if (isSmartTour) {
-                tourApiUrl = 'https://api.komoot.de/v007/discover_tours/' + tourId;
-                coordsApiUrl = 'https://api.komoot.de/v007/smart_tours/' + tourId + '/coordinates';
-            } else {
-                tourApiUrl = 'https://api.komoot.de/v007/tours/' + tourId;
-                coordsApiUrl = 'https://api.komoot.de/v007/tours/' + tourId + '/coordinates';
-            }
+            var tourApiUrl = isSmartTour ? 'https://api.komoot.de/v007/discover_tours/' + tourId : 'https://api.komoot.de/v007/tours/' + tourId;
+            var coordsApiUrl = isSmartTour ? 'https://api.komoot.de/v007/smart_tours/' + tourId + '/coordinates' : 'https://api.komoot.de/v007/tours/' + tourId + '/coordinates';
 
             var tourData = await fetchWithFallbacks(tourApiUrl, "Metadata");
             var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
-            var tourDistance = tourData.distance || 0;
+            var tourDistance = tourData.distance || 0; 
             
-            logMsg('Extracted Name: "' + tourName + '"', "info");
-
             var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
-            if (!coordsData.items || coordsData.items.length === 0) {
-                throw new Error("No GPS waypoints received.");
-            }
+            if (!coordsData.items || coordsData.items.length === 0) throw new Error("No GPS waypoints received.");
             
             renderMap(coordsData.items);
             generateGPX(tourName, coordsData.items, tourDistance);
@@ -291,48 +300,34 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         var btn = document.getElementById('downloadBtn');
-        if (btn) {
-            btn.addEventListener('click', startExport);
-            logMsg("Engine loaded and button active.", "info");
-        } else {
-            logMsg("CRITICAL: Button not found in DOM!", "error");
-        }
+        if (btn) btn.addEventListener('click', startExport);
 
-        // ==========================================
-        // AUTO-START FÜR ANDROID "TEILEN"-MENÜ (BOMBENSICHER)
-        // ==========================================
         try {
             var urlParams = new URLSearchParams(window.location.search);
             var sharedText = urlParams.get('text') || "";
             var sharedUrl = urlParams.get('url') || "";
             var combinedShare = sharedText + " " + sharedUrl;
             
-            // Sichere Textsuche ohne Regex-Sonderzeichen
             var cleanUrl = "";
-            var startIdx = combinedShare.indexOf("http");
-            if (startIdx > -1) {
-                var endIdx = combinedShare.indexOf(" ", startIdx);
-                if (endIdx === -1) endIdx = combinedShare.length;
-                cleanUrl = combinedShare.substring(startIdx, endIdx);
+            if (combinedShare.indexOf("komoot.de/tour/") > -1 || combinedShare.indexOf("komoot.com/tour/") > -1) {
+                var splitChar = combinedShare.indexOf("komoot.de") > -1 ? "komoot.de/tour/" : "komoot.com/tour/";
+                var idPart = combinedShare.split(splitChar)[1].split(" ")[0].split("?")[0].split("#")[0];
+                cleanUrl = "https://www.komoot.de/tour/" + idPart;
+            } else if (combinedShare.indexOf("komoot.de/smarttour/") > -1 || combinedShare.indexOf("komoot.com/smarttour/") > -1) {
+                var splitChar = combinedShare.indexOf("komoot.de") > -1 ? "komoot.de/smarttour/" : "komoot.com/smarttour/";
+                var idPart = combinedShare.split(splitChar)[1].split(" ")[0].split("?")[0].split("#")[0];
+                cleanUrl = "https://www.komoot.de/smarttour/" + idPart;
             }
             
-            if (cleanUrl !== "" && (cleanUrl.indexOf("/tour/") > -1 || cleanUrl.indexOf("/smarttour/") > -1)) {
-                logMsg("App über 'Teilen'-Menü geöffnet!", "system");
-                
+            if (cleanUrl !== "") {
                 var urlInput = document.getElementById('tourUrl');
                 if (urlInput) {
                     urlInput.value = cleanUrl;
-                    logMsg("URL automatisch eingefügt.", "success");
-                    logMsg("Starte automatischen Download...", "info");
-                    
-                    setTimeout(function() {
-                        startExport();
-                    }, 1000);
+                    logMsg("URL grabbed from Android Share. Starting...", "info");
+                    setTimeout(function() { startExport(); }, 1000);
                 }
             }
-        } catch(e) {
-            logMsg("Auto-Start Fehler: " + e.message, "warning");
-        }
+        } catch(e) {}
     });
 
 </script>
