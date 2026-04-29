@@ -17,7 +17,7 @@ A lightweight, purely client-side Progressive Web App (PWA) to quickly download 
   <img src="image/screenshot2.png" alt="Map Preview Screenshot" width="45%">
 </p>
 
-## ✨ Features (v3.1 Pro)
+## ✨ Features (v3.2 Pro)
 
 * **🚀 Native Android "Share" Integration:** Through the Web Share Target API, this app seamlessly integrates into your smartphone's OS. Hit "Share -> Other Apps" inside the official Komoot app, select "Komoot 2 GPX", and the PWA will instantly launch, grab the link, and auto-start the GPX download in the background. No copy-pasting required!
 * **📂 "Open in App" Routing:** Once the GPX file is downloaded, a dynamic button appears that leverages the native device Share API. This allows you to instantly push the downloaded file into your favorite offline navigation app (e.g., OsmAnd, Garmin Connect, Locus Map).
