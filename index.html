@@ -18,7 +18,6 @@
             --text-main: #ffffff; --text-muted: #a0a5a9;
             --primary: #97b536; --primary-hover: #86a32d;
             --install: #3498db; --install-hover: #2980b9;
-            --open-app: #e67e22; --open-app-hover: #d35400;
             --console-bg: #0d0f11; --border-radius: 16px;
         }
         * { box-sizing: border-box; }
@@ -40,10 +39,6 @@
         .main-btn { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(151, 181, 54, 0.2); }
         .main-btn:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(151, 181, 54, 0.4); }
         .main-btn:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none; transform: none; }
-        
-        #openAppBtn { background: var(--open-app); color: white; margin-top: 15px; display: none; box-shadow: 0 4px 15px rgba(230, 126, 34, 0.2); animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        #openAppBtn:hover { background: var(--open-app-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(230, 126, 34, 0.4); }
-        @keyframes popIn { 0% { opacity: 0; transform: scale(0.9); } 100% { opacity: 1; transform: scale(1); } }
         
         .input-group { position: relative; margin-bottom: 15px; }
         input[type="url"] { width: 100%; padding: 16px 16px 16px 45px; border: 2px solid transparent; border-radius: 12px; background: var(--input-bg); color: white; font-size: 15px; font-family: inherit; outline: none; transition: all 0.2s ease; }
@@ -89,7 +84,7 @@
         <h1>Komoot 2 GPX</h1>
     </div>
     <div class="meta-header">
-        v3.2 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a>
+        v3.3 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a>
     </div>
     
     <button type="button" id="installAppBtn">
@@ -107,11 +102,6 @@
         Preview & Download GPX
     </button>
     
-    <button type="button" id="openAppBtn">
-        <svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>
-        Send to App
-    </button>
-    
     <div id="debug-console">
         <div class="log-system">user@komoot-exporter:~$ init engine</div>
         <div class="log-info">> System ready. Share API active.</div>
@@ -125,11 +115,9 @@
 <script>
     var map = null;
     var trackLayer = null;
-    var lastGeneratedFile = null;
 
     let deferredPrompt;
     const installBtn = document.getElementById('installAppBtn');
-    const openAppBtn = document.getElementById('openAppBtn');
 
     window.addEventListener('beforeinstallprompt', function(e) {
         e.preventDefault();
@@ -148,42 +136,6 @@
 
     window.addEventListener('appinstalled', function() {
         installBtn.style.display = 'none';
-    });
-
-    openAppBtn.addEventListener('click', async function() {
-        if (!lastGeneratedFile) return;
-        
-        try {
-            // Methode 1: Versuch, die Datei regulär via Share API zu senden
-            if (navigator.canShare && navigator.canShare({ files: [lastGeneratedFile] })) {
-                await navigator.share({
-                    files: [lastGeneratedFile],
-                    title: 'Import GPX Track',
-                    text: 'Import this Komoot Track into your navigation app'
-                });
-                logMsg("Success: Sent file to system handler", "info");
-            } else {
-                throw new Error("Share API not fully supported on this device/wrapper.");
-            }
-        } catch (error) {
-            if (error.name === "AbortError") return; // User hat das Teilen-Menü abgebrochen, kein Fehler
-            
-            // Methode 2: Android Permission Denied Fallback (sehr häufig bei Chrome PWAs)
-            logMsg("File-sharing blocked by OS: " + error.message, "warning");
-            
-            try {
-                // Wir teilen statt der "verbotenen" lokalen Datei einfach Text,
-                // was Android dann meistens den anderen Apps als Import-Aufforderung übergibt.
-                await navigator.share({
-                    title: 'GPX Track Downloaded',
-                    text: 'The GPX file has been saved to your "Downloads" folder. Please open your navigation app (like Garmin/OsmAnd) and import it manually from there.'
-                });
-            } catch(e) {
-                if (e.name !== "AbortError") {
-                   logMsg("All sharing methods blocked by your device sandbox.", "error"); 
-                }
-            }
-        }
     });
 
     function logMsg(message, type) {
@@ -308,8 +260,7 @@
 
         try {
             var blob = new Blob([gpxString], { type: "application/gpx+xml" });
-            lastGeneratedFile = new File([blob], filename, { type: "application/gpx+xml" });
-
+            
             var link = document.createElement("a");
             link.href = URL.createObjectURL(blob);
             link.download = filename;
@@ -319,8 +270,6 @@
             
             logMsg("Download completed successfully!", "success");
             logMsg("File saved to folder: Downloads/" + filename, "file");
-            
-            openAppBtn.style.display = 'flex';
 
         } catch(e) {
             logMsg('Download Error: ' + e.message, "error");
@@ -332,9 +281,6 @@
         var btn = document.getElementById('downloadBtn');
         var consoleDiv = document.getElementById('debug-console');
         var mapDiv = document.getElementById('map-container');
-        
-        openAppBtn.style.display = 'none';
-        lastGeneratedFile = null;
 
         consoleDiv.innerHTML = '<div class="log-system">user@komoot-exporter:~$ start --url</div>';
         mapDiv.classList.remove('visible');
