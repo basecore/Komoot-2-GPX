@@ -7,8 +7,9 @@ A lightweight, purely client-side Progressive Web App (PWA) to quickly download 
 
 👉 **[Launch Web App](https://basecore.github.io/Komoot-2-GPX/)**
 
-## ✨ Features (v2.1)
+## ✨ Features (v2.2)
 
+* **🚀 Native Android "Share" Integration:** Through the Web Share Target API, this app seamlessly integrates into your smartphone's OS. Simply hit "Share -> Other Apps" inside the official Komoot app, select "Komoot 2 GPX", and the PWA will instantly launch, grab the link, and auto-start the GPX download. No copy-pasting required!
 * **🔄 Smarttour & Discovery Support:** Automatically detects whether you pasted a regular user tour (`/tour/`) or a generated Komoot collection (`/smarttour/`) and routes API calls accordingly.
 * **🛡️ 6-Layer Proxy Fallback Engine:** Since Komoot strictly blocks public CORS proxies, this app features a built-in rotation of 6 different proxy servers (like *cors.lol*, *allorigins*, etc.). If one proxy is blocked, it instantly switches to the next one—ensuring a 99.9% uptime.
 * **🗺️ Interactive Leaflet Map:** Displays the exact route on an OpenStreetMap interface before the download begins, allowing you to visually verify the tour.
@@ -18,13 +19,19 @@ A lightweight, purely client-side Progressive Web App (PWA) to quickly download 
 
 ## 📱 How to Use (Smartphone & Desktop)
 
+### Option A: The "Pro" Workflow (Android / IodeOS)
+1. Open the [Komoot-2-GPX App](https://basecore.github.io/Komoot-2-GPX/) in Chrome, Brave, or Kiwi Browser.
+2. Click **"Install App"** or **"Add to Home Screen"**.
+3. Open your official Komoot app and find a public tour.
+4. Tap "Share" -> "More Apps..." and select **Komoot 2 GPX**.
+5. The app opens, auto-pastes the link, and triggers the GPX download instantly.
+
+### Option B: The Manual Workflow (Any Device)
 1. Open the Komoot App or Website.
 2. Navigate to a **public** tour or smarttour collection.
 3. Use the "Share" function to copy the tour link to your clipboard (e.g., `https://www.komoot.de/tour/123456789`).
 4. Open the **[Komoot-2-GPX App](https://basecore.github.io/Komoot-2-GPX/)**.
 5. Paste the link and click "Preview & Download GPX".
-
-*(Pro Tip: For the best experience on a smartphone like a Fairphone with IodeOS, open the URL in your mobile browser and select "Add to Home Screen" to install it as a standalone PWA.)*
 
 ## 🛠 Technical Details
 
