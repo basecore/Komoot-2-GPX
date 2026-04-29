@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Komoot 2 GPX Exporter</title>
     <meta name="theme-color" content="#1e2124">
+    <link rel="manifest" href="manifest.json">
     
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     
@@ -49,6 +50,17 @@
             if (log) log.innerHTML += '<div class="log-error">[CRASH] Line ' + line + ': ' + msg + '</div>';
             return false;
         };
+
+        // Service Worker registrieren (zwingend erforderlich für Chrome "App installieren" Dialog)
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+                navigator.serviceWorker.register('./sw.js').then(function(registration) {
+                    console.log('ServiceWorker erfolgreich registriert!');
+                }).catch(function(err) {
+                    console.log('ServiceWorker Fehler: ', err);
+                });
+            });
+        }
     </script>
 </head>
 <body>
@@ -56,7 +68,7 @@
 <div class="container">
     <h1>Komoot 2 GPX</h1>
     <div class="meta-header">
-        v2.1 | Released: 28.04.2026 | by basecore<br>
+        v2.2 | Released: 28.04.2026 | by basecore<br>
         <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">View on GitHub</a> • 
         <a href="https://github.com/basecore/Komoot-2-GPX/issues" target="_blank">Report Issue</a>
     </div>
@@ -86,7 +98,6 @@
         consoleDiv.scrollTop = consoleDiv.scrollHeight;
     }
 
-    // Erweiterte 6-Fach Proxy Rotation für maximale Transparenz und Stabilität
     var PROXY_LIST = [
         { name: "cors.x2u.in", url: function(u) { return 'https://cors.x2u.in/?' + encodeURIComponent(u); } },
         { name: "cors.lol", url: function(u) { return 'https://api.cors.lol/?url=' + encodeURIComponent(u); } },
@@ -112,7 +123,6 @@
                 }
                 
                 var text = await response.text();
-                // Blockiert Komoot den Proxy mit einer HTML Captcha Seite?
                 if (text.trim().startsWith('<')) {
                     throw new Error("Returned HTML (Proxy likely blocked by Komoot)");
                 }
@@ -226,7 +236,6 @@
             var tourId = "";
             var isSmartTour = false;
 
-            // Sicheres URL Parsing ohne fehleranfällige Regex
             if (urlInput.indexOf("/smarttour/") > -1) {
                 isSmartTour = true;
                 tourId = urlInput.split("/smarttour/")[1].split("?")[0].split("/")[0].split("#")[0];
@@ -254,7 +263,7 @@
 
             var tourData = await fetchWithFallbacks(tourApiUrl, "Metadata");
             var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
-            var tourDistance = tourData.distance || 0; // Komoot liefert Distanz in Metern
+            var tourDistance = tourData.distance || 0;
             
             logMsg('Extracted Name: "' + tourName + '"', "info");
 
@@ -290,33 +299,32 @@
         }
 
         // ==========================================
-        // AUTO-START FÜR ANDROID "TEILEN"-MENÜ
+        // AUTO-START FÜR ANDROID "TEILEN"-MENÜ (BOMBENSICHER)
         // ==========================================
         try {
             var urlParams = new URLSearchParams(window.location.search);
-            
-            // Komoot teilt Links oft im Feld 'text' (mit Beschreibungen) oder im Feld 'url'
             var sharedText = urlParams.get('text') || "";
             var sharedUrl = urlParams.get('url') || "";
-            
-            // Kombiniere alles, was wir bekommen haben
             var combinedShare = sharedText + " " + sharedUrl;
             
-            // Suche mit Regex nach einem echten Komoot-Link in dem geteilten Text
-            var linkMatch = combinedShare.match(/https?://(www.)?komoot.[a-z]+/(tour|smarttour)/d+/);
+            // Sichere Textsuche ohne Regex-Sonderzeichen
+            var cleanUrl = "";
+            var startIdx = combinedShare.indexOf("http");
+            if (startIdx > -1) {
+                var endIdx = combinedShare.indexOf(" ", startIdx);
+                if (endIdx === -1) endIdx = combinedShare.length;
+                cleanUrl = combinedShare.substring(startIdx, endIdx);
+            }
             
-            if (linkMatch && linkMatch[0]) {
-                var cleanUrl = linkMatch[0];
+            if (cleanUrl !== "" && (cleanUrl.indexOf("/tour/") > -1 || cleanUrl.indexOf("/smarttour/") > -1)) {
                 logMsg("App über 'Teilen'-Menü geöffnet!", "system");
                 
                 var urlInput = document.getElementById('tourUrl');
                 if (urlInput) {
-                    // Trage den Link ins Feld ein
                     urlInput.value = cleanUrl;
-                    logMsg("URL automatisch eingefügt: " + cleanUrl, "success");
-                    logMsg("Starte automatischen GPX-Download...", "info");
+                    logMsg("URL automatisch eingefügt.", "success");
+                    logMsg("Starte automatischen Download...", "info");
                     
-                    // Starte den Export automatisch nach 1 Sekunde
                     setTimeout(function() {
                         startExport();
                     }, 1000);
