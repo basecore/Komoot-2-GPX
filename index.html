@@ -67,7 +67,7 @@
         };
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(err => console.log('SW Error:', err));
+            navigator.serviceWorker.register('sw.js').catch(function(err) { console.log('SW Error:', err); });
         }
     </script>
 </head>
@@ -146,9 +146,6 @@
         consoleDiv.scrollTop = consoleDiv.scrollHeight;
     }
 
-    // ==========================================
-    // ULTIMATIVE PROXY ENGINE 
-    // ==========================================
     var PROXY_LIST = [
         { name: "allorigins (Wrapped)", type: "wrapper", url: function(u) { return 'https://api.allorigins.win/get?url=' + encodeURIComponent(u); } },
         { name: "Direct API", type: "raw", url: function(u) { return u; } },
@@ -169,7 +166,7 @@
             
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 12000); 
+                const timeoutId = setTimeout(function() { controller.abort(); }, 12000); 
 
                 var reqHeaders = { 'Accept': 'application/hal+json, application/json, */*' };
                 if (proxy.name === 'cors.sh') reqHeaders['x-cors-api-key'] = 'temp_81f0b093380c2f8f8ed97405d4142f74';
@@ -266,14 +263,13 @@
             
             logMsg("Download triggered!", "success");
             
-            // NEU: Native System-Benachrichtigung für den Benutzer
-            setTimeout(() => {
-                alert(`✅ Download Complete!
+            setTimeout(function() {
+                alert("✅ Download Complete!
 
 File saved as:
-"${filename}"
+" + filename + "
 
-Check your device's "Downloads" folder to open the GPX file.`);
+Check your device's Downloads folder to open the GPX file.");
             }, 500);
 
         } catch(e) {
@@ -293,7 +289,7 @@ Check your device's "Downloads" folder to open the GPX file.`);
         if (!urlInput) { logMsg("Error: Please provide a URL", "error"); return; }
 
         btn.disabled = true;
-        btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Processing...`;
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Processing...';
 
         try {
             var tourId = ""; var isSmartTour = false;
@@ -314,7 +310,6 @@ Check your device's "Downloads" folder to open the GPX file.`);
 
             var tourData = await fetchWithFallbacks(tourApiUrl, "Metadata");
             
-            // NEU: Erweiterte Fehlerbehandlung für private Touren bei Metadaten
             if (tourData.error) {
                 if (tourData.error === "AccessDenied" || tourData.error === "PrivateTour") {
                      throw new Error("Access Denied: This tour is set to PRIVATE.");
@@ -327,7 +322,6 @@ Check your device's "Downloads" folder to open the GPX file.`);
             
             var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
             
-            // NEU: Erweiterte Fehlerbehandlung für private Touren bei Koordinaten
             if (coordsData.error) {
                 if (coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
                      throw new Error("Access Denied: This tour is set to PRIVATE.");
@@ -341,13 +335,12 @@ Check your device's "Downloads" folder to open the GPX file.`);
             renderMap(coordsData.items);
             generateGPX(tourName, coordsData.items, tourDistance);
             
-            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Success!`;
+            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Success!';
             
         } catch (error) {
             logMsg('ABORT: ' + error.message, "error");
-            btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> Failed`;
+            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> Failed';
             
-            // Bei Fehler auch ein Alert zeigen, wenn die App im Hintergrund via "Share" getriggert wurde
             if (document.getElementById('tourUrl').value.indexOf('?shared=true') > -1) {
                 alert("❌ Download Failed
 
@@ -356,7 +349,7 @@ Check your device's "Downloads" folder to open the GPX file.`);
         } finally {
             setTimeout(function() { 
                 btn.disabled = false; 
-                btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Preview & Download GPX`;
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Preview & Download GPX';
             }, 3000);
         }
     }
@@ -385,7 +378,6 @@ Check your device's "Downloads" folder to open the GPX file.`);
             if (cleanUrl !== "") {
                 var urlInput = document.getElementById('tourUrl');
                 if (urlInput) {
-                    // Markiere die URL mit einem Parameter, damit wir wissen, dass sie geteilt wurde
                     urlInput.value = cleanUrl + "?shared=true"; 
                     logMsg("Share Target active. Booting sequence...", "system");
                     setTimeout(function() { startExport(); }, 1000);
