@@ -1,63 +1,71 @@
-# Komoot 2 GPX 🗺️ 
+<p align="center">
+  <img src="image/readme-banner.svg" alt="Komoot 2 GPX Banner" width="100%">
+</p>
 
-[![Live App](https://img.shields.io/badge/Live-Web_App-97b536?style=for-the-badge&logo=googlechrome&logoColor=white)](https://basecore.github.io/Komoot-2-GPX/)
+# Komoot-2-GPX Exporter 🚴‍♂️⛰️
 
-A lightweight, powerful, and browser-based Progressive Web App (PWA) designed to extract and download GPX tracks directly from Komoot tours. 
+[![Live App](https://img.shields.io/badge/Open_Web_App-97b536?style=for-the-badge&logo=appveyor)](https://basecore.github.io/Komoot-2-GPX/)
+[![Made with Gemini 3.1](https://img.shields.io/badge/AI_Generated-Gemini_3.1-blue?style=for-the-badge&logo=google)](https://gemini.google.com/)
 
-**👉 [Open the App here: basecore.github.io/Komoot-2-GPX](https://basecore.github.io/Komoot-2-GPX/)**
+A lightweight, purely client-side Progressive Web App (PWA) to quickly download public Komoot tours as GPX files without needing a premium subscription. Fully optimized for smartphones and seamless import into ecosystems like Garmin Connect.
 
-## 💡 What is this for?
-Sometimes you want to download a GPX file from a Komoot tour to use it on your dedicated GPS device, smartwatch, or offline navigation app, but you might face restrictions or just want a quick extraction tool. **Komoot 2 GPX** fetches the raw GPS coordinates of any public Komoot tour (both Standard and Smart Tours) and instantly converts them into a standard `.gpx` file – right in your browser, without requiring a server backend.
+👉 **[Launch Web App](https://basecore.github.io/Komoot-2-GPX/)**
 
-## ✨ Complete Feature List
+## ✨ Features (v2.8 Pro)
 
-* **Universal Tour Support:** Works with standard Komoot Tours (`/tour/`) and Smart Tours (`/smarttour/`).
-* **Interactive Map Preview:** Automatically renders the extracted route on a live map (powered by Leaflet.js) before downloading.
-* **8-Stage Fallback Proxy System:** Bypasses CORS (Cross-Origin Resource Sharing) restrictions by intelligently cycling through up to 8 different routing methods (Direct API, AllOrigins, Corsproxy.io, Cors.sh, CodeTabs, etc.) until the data is successfully fetched.
-* **Anti-Adblocker Engine ("Wrapped" Mode):** Specifically built to bypass aggressive network adblockers (like the ones built into iodéOS) using a specialized data wrapper.
-* **HTTP 406 Bypass:** Injects custom `application/hal+json` headers to prevent Komoot's direct API from rejecting the fetch requests.
-* **Live Debug Console:** An integrated terminal-like UI that shows you exactly what the app is currently doing, which proxy is being tested, and where errors occur in real-time.
-* **PWA & Offline Capability:** Can be installed directly to your smartphone's homescreen for a native, full-screen app experience.
-* **Android Share Target Integration:** Allows you to send a tour link directly from the official Komoot App into this tool via the Android "Share" menu.
+* **🚀 Native Android "Share" Integration:** Through the Web Share Target API, this app seamlessly integrates into your smartphone's OS. Hit "Share -> Other Apps" inside the official Komoot app, select "Komoot 2 GPX", and the PWA will instantly launch, grab the link, and auto-start the GPX download. No copy-pasting required!
+* **🛡️ Anti-Adblocker Engine ("Wrapped" Mode):** Bypasses aggressive network adblockers (like the ones built into iodéOS) using a specialized data wrapper to securely fetch coordinates without getting blocked.
+* **🔧 HTTP 406 Bypass:** Injects custom `application/hal+json` headers to prevent Komoot's direct API from rejecting the fetch requests.
+* **🎨 Pro UI & Live Debug Console:** A beautiful, responsive card-based interface with smooth animations, custom SVG icons, and a developer-grade terminal window that shows you exactly what the app is currently doing.
+* **🔄 Smarttour & Discovery Support:** Automatically detects whether you pasted a regular user tour (`/tour/`) or a generated Komoot collection (`/smarttour/`) and routes API calls accordingly.
+* **🌐 8-Layer Proxy Fallback Engine:** Since Komoot strictly blocks public CORS proxies, this app features a robust, automated rotation of 8 independent proxy servers. If one proxy fails, it instantly switches to the next one—ensuring maximum uptime.
+* **🗺️ Interactive Leaflet Map:** Displays the exact route on an OpenStreetMap interface before the download begins, allowing you to visually verify the tour.
+* **⌚ Garmin-Ready Data:** Generates 100% compliant XML/GPX files containing both elevation (`<ele>`) and precise timestamps (`<time>`), which are mandatory for activity tracking in Garmin Connect.
+* **📱 100% PWA Installable:** Meets Chrome's strict install criteria (including maskable icons). Install it directly on your home screen via the built-in "Install App" button to use it like a native app in full-screen mode.
 
-## 🚀 How to use
+## 📱 How to Use (Smartphone & Desktop)
 
-### 1. Standard Web Browser
-1. Go to [Komoot 2 GPX](https://basecore.github.io/Komoot-2-GPX/).
-2. Copy a tour URL from Komoot (e.g., `https://www.komoot.de/tour/12345678`).
-3. Paste it into the input field.
-4. Click **Preview & Download GPX**.
+### Option A: The "Pro" Workflow (Standard Android)
+1. Open the [Komoot-2-GPX App](https://basecore.github.io/Komoot-2-GPX/) in Chrome, Brave, or Kiwi Browser.
+2. Click the blue **"📱 Install App on Device"** button (or use the browser menu to "Add to Home Screen").
+3. Open your official Komoot app and find a public tour.
+4. Tap "Share" -> "More Apps..." and select **Komoot 2 GPX**.
+5. The app opens, auto-pastes the link, and triggers the GPX download instantly.
 
-### 2. PWA Installation (Smartphone)
-1. Open the website in your mobile browser.
-2. Click the **"Install App on Device"** button or select "Add to Homescreen" from your browser menu.
-3. Open the newly installed app from your homescreen.
-4. From now on, you can simply tap "Share" inside the Komoot App and select **Komoot 2 GPX** to instantly extract the track!
+### Option B: The Manual Workflow (Any Device)
+1. Open the Komoot App or Website.
+2. Navigate to a **public** tour or smarttour collection.
+3. Use the "Share" function to copy the tour link to your clipboard (e.g., `https://www.komoot.de/tour/123456789`).
+4. Open the **[Komoot-2-GPX App](https://basecore.github.io/Komoot-2-GPX/)**.
+5. Paste the link and click "Preview & Download GPX".
 
 ---
 
 ## ⚠️ Known Limitations: Android "Share" Menu (iodéOS / De-googled Phones)
 
-While this app fully supports the Android Web Share Target API, **de-googled operating systems** (like iodéOS, GrapheneOS, LineageOS without Google Apps) or privacy-focused browsers (like Firefox) might not show the app in the Android Share Menu.
+Standard Chromium browsers require **Google Play Services** to silently convert a PWA into a native "WebAPK". Only these true WebAPKs are allowed to appear in the Android Share Menu. 
+On **de-googled operating systems (like iodéOS, CalyxOS, GrapheneOS)** or when using Firefox, the browser will only create a "homescreen bookmark", which Android strictly prevents from acting as a Share Target.
 
-**Why?**
-Standard browsers (Chrome, Brave) require **Google Play Services** to silently convert a PWA into a native "WebAPK". Only these true WebAPKs are allowed by Android to appear in the Share Menu. On de-googled phones, the browser falls back to creating a "simple bookmark" on your homescreen, which Android restricts from receiving shared links.
-
-### 🛠️ Workarounds for De-googled Users:
-To get the "Share -> Komoot 2 GPX" functionality on a privacy-focused phone, you need to wrap this PWA into a real `.apk` file:
+### 🛠️ Workarounds for De-googled Users (To unlock the Share Menu):
+If you want the full "Share -> Komoot 2 GPX" functionality on a privacy-focused phone, you need to wrap the PWA into a real `.apk`:
 
 1. **PWABuilder (Recommended):** 
-   * Go to [PWABuilder.com](https://www.pwabuilder.com/).
-   * Enter the URL of this repository: `https://basecore.github.io/Komoot-2-GPX/`
-   * Click "Package for Android" and download the generated `.apk`. 
-   * Install the `.apk` on your phone. As a native app, it will reliably show up in your Share Menu!
-2. **Native Alpha (F-Droid):** 
-   * Download the open-source app [Native Alpha](https://github.com/cylonid/NativeAlphaForAndroid) from F-Droid.
-   * Add the URL to containerize the website into an isolated Android app, enabling native intents.
+   Go to [PWABuilder.com](https://www.pwabuilder.com/), enter the URL of this repository, and click "Package for Android". Download the generated `.apk` and install it. As a native app, it will reliably show up in your Share Menu!
+2. **Native Alpha / Web Apps (F-Droid):** 
+   Use an open-source sandbox wrapper like [Native Alpha](https://github.com/cylonid/NativeAlphaForAndroid) from F-Droid to containerize the website into an isolated Android app, which handles share intents natively.
 
 ---
 
-## 👨‍💻 Credits & Tech Stack
+## 🛠 Technical Details
+
+This project is built using vanilla HTML, CSS, and JavaScript. 
+To bypass strict CORS (Cross-Origin Resource Sharing) policies and access the open Komoot `v007` API directly from the browser, the app utilizes an automated, fail-safe proxy routing mechanism. The downloaded JSON coordinates are then assembled into a valid GPX document and triggered as a local file download directly on your device. 
+**Privacy First:** Zero data is sent to custom backends. The entire parsing process happens locally in your browser.
+
+## 🤖 Credits
+
 * **Developer:** [basecore](https://github.com/basecore)
-* **AI Assistance:** This tool and its advanced proxy/routing logic were co-developed and optimized with the help of **Gemini 3.1**.
-* **Libraries used:** [Leaflet.js](https://leafletjs.com/) for map rendering.
+* **AI Assistance:** The architecture, UI design, code logic, and the advanced 8-layer proxy fallback mechanism were entirely developed and optimized with the help of **Gemini 3.1**.
+
+---
+**Disclaimer:** This project is not affiliated with or endorsed by Komoot in any way. It strictly uses publicly accessible API endpoints. Designed for personal and private use only.
