@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="images/icon.svg" alt="GPS Arbeitszeit-Tracker Logo" width="120" height="120" style="margin-bottom: 15px;">
+<img src="image/icon.svg" alt="GPS Arbeitszeit-Tracker Logo" width="120" height="120" style="margin-bottom: 15px;">
 
 # GPS Arbeitszeit-Tracker & Analysetool
 
@@ -20,15 +20,15 @@ Eine webbasierte Progressive Web App (PWA) zur lokalen Auswertung von Arbeitszei
 
 **Desktop Ansicht** (Übersichtliche GUI & Detailansicht mit interaktiver Karte):
 <p align="center">
-  <img src="images/arbeitszeit_tracker_pc_gui2.jpg" alt="Computer Ansicht der GUI" width="49%">
-  <img src="images/arbeitszeit_tracker_pc_gui1.jpg" alt="Übersicht der Zeiten mit Map" width="49%">
+  <img src="image/arbeitszeit_tracker_pc_gui2.jpg" alt="Computer Ansicht der GUI" width="49%">
+  <img src="image/arbeitszeit_tracker_pc_gui1.jpg" alt="Übersicht der Zeiten mit Map" width="49%">
 </p>
 
 **Smartphone Ansicht** (Optimierte GUI für mobile Endgeräte):
 <p align="center">
-  <img src="images/arbeitszeit_tracker_smartphone_gui1.jpg" alt="Optimierte GUI" width="32%">
-  <img src="images/arbeitszeit_tracker_smartphone_gui2.jpg" alt="Einfache Ansicht" width="32%">
-  <img src="images/arbeitszeit_tracker_smartphone_gui3.jpg" alt="Arbeitsplatz Konfiguration" width="32%">
+  <img src="image/arbeitszeit_tracker_smartphone_gui1.jpg" alt="Optimierte GUI" width="32%">
+  <img src="image/arbeitszeit_tracker_smartphone_gui2.jpg" alt="Einfache Ansicht" width="32%">
+  <img src="image/arbeitszeit_tracker_smartphone_gui3.jpg" alt="Arbeitsplatz Konfiguration" width="32%">
 </p>
 
 ---
@@ -77,7 +77,7 @@ Für den Streckenimport werden aktuell folgende Dateitypen unterstützt:
 ## ⚙️ Einrichtung & Bedienung im Alltag
 
 **Einmalige Konfiguration:**
-1. Öffne die Bereiche **"<img src="images/icon.svg" width="18" style="vertical-align: text-bottom;"> Arbeitsplatz"** und **"🏠 Zuhause"**.
+1. Öffne die Bereiche **"<img src="image/icon.svg" width="18" style="vertical-align: text-bottom;"> Arbeitsplatz"** und **"🏠 Zuhause"**.
 2. Trage deine echten Adressen ein, setze den Punkt auf der Karte oder klicke auf `Standorte automatisch finden` nach deinem ersten Upload.
 3. Definiere den Radius (m), deine Sollstunden und die Standardpause.
 4. Klicke auf `Speichern`.
@@ -129,9 +129,9 @@ Da Google die Web-Zeitachse weitgehend eingestellt hat, liegen die Daten lokal a
 4. Erstelle den Export, entpacke die ZIP und lade die Datei hier hoch.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/basecore/arbeitszeit-tracker/main/images/takeout_google1.png" width="32%" alt="Google Takeout Schritt 1">
-  <img src="https://raw.githubusercontent.com/basecore/arbeitszeit-tracker/main/images/takeout_google2.png" width="32%" alt="Google Takeout Schritt 2">
-  <img src="https://raw.githubusercontent.com/basecore/arbeitszeit-tracker/main/images/takeout_google3.png" width="32%" alt="Google Takeout Schritt 3">
+  <img src="https://raw.githubusercontent.com/basecore/arbeitszeit-tracker/main/image/takeout_google1.png" width="32%" alt="Google Takeout Schritt 1">
+  <img src="https://raw.githubusercontent.com/basecore/arbeitszeit-tracker/main/image/takeout_google2.png" width="32%" alt="Google Takeout Schritt 2">
+  <img src="https://raw.githubusercontent.com/basecore/arbeitszeit-tracker/main/image/takeout_google3.png" width="32%" alt="Google Takeout Schritt 3">
 </p>
 </details>
 
