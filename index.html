@@ -88,7 +88,7 @@
         <h1>Komoot 2 GPX</h1>
     </div>
     <div class="meta-header">
-        v3.9 Pro (Map POIs) | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
+        v3.9 Pro (Smart Bypass) | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
     </div>
     
     <button type="button" id="installAppBtn">
@@ -219,7 +219,6 @@
         throw new Error('All routes dead. Last error: ' + lastError);
     }
 
-    // UPDATE: renderMap nutzt jetzt auch die POIs zum Zeichnen auf die Karte
     function renderMap(coords, pois) {
         try {
             var mapDiv = document.getElementById('map-container');
@@ -230,7 +229,6 @@
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             }
             
-            // Alten Track und alte POIs löschen
             if (trackLayer) map.removeLayer(trackLayer);
             if (poiLayerGroup) map.removeLayer(poiLayerGroup);
             
@@ -242,7 +240,6 @@
             trackLayer = L.polyline(latLngs, { color: '#97b536', weight: 4, lineCap: 'round', lineJoin: 'round' }).addTo(map);
             map.fitBounds(trackLayer.getBounds());
             
-            // POIs als Marker hinzufügen
             if (pois && pois.length > 0) {
                 for (var j = 0; j < pois.length; j++) {
                     var poi = pois[j];
@@ -261,11 +258,7 @@
                         });
                         
                         marker.bindPopup("<b>" + poiName + "</b>");
-                        
-                        // Hover Event für Popup
-                        marker.on('mouseover', function(e) {
-                            this.openPopup();
-                        });
+                        marker.on('mouseover', function(e) { this.openPopup(); });
                         
                         poiLayerGroup.addLayer(marker);
                     }
@@ -409,7 +402,7 @@
             
             if (tourData.error) {
                 if (tourData.error === "AccessDenied" || tourData.error === "PrivateTour") {
-                     logMsg("NOTICE: This tour is PRIVATE. If it's your own tour, please download it manually via the Komoot website or Komoot app (click the three dots -> Download GPX file).", "warning");
+                     logMsg("NOTICE: This tour is PRIVATE. If it's your own tour, please download it manually via the Komoot website or Komoot app.", "warning");
                      throw new Error("Access Denied: This tour is set to PRIVATE.");
                 }
                 throw new Error("API Error: " + tourData.error);
@@ -418,7 +411,7 @@
             var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
             var tourDistance = tourData.distance || 0; 
             
-            // 2. Hole Koordinaten - SMART TOUR EXTRAKTION FIX
+            // 2. Hole Koordinaten - SMART TOUR 403 BYPASS
             var coordsDataItems = [];
             var trueNumericTourId = tourId; 
             
@@ -428,26 +421,54 @@
             }
             
             var coordsApiUrl = 'https://www.komoot.de/api/v007/tours/' + trueNumericTourId + '/coordinates';
-            var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
+            var coordsData = null;
             
-            if (coordsData.error) {
-                if (coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
-                     logMsg("NOTICE: This tour is PRIVATE. If it's your own tour, please download it manually.", "warning");
-                     throw new Error("Access Denied: This tour is set to PRIVATE.");
-                }
-                throw new Error("API Error: " + coordsData.error);
+            try {
+                coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates (Standard)");
+            } catch (err) {
+                logMsg("Standard Coordinates API Failed. Checking SmartTour Fallback...", "warning");
             }
+            
+            // AUTOMATISCHER RETTUNGS-VERSUCH BEI 403 (Z.B. REINE SMART TOURS WIE ID 32734476)
+            if (!coordsData || coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
+                if (isSmartTour) {
+                    logMsg("Tour blocked on standard endpoint. Attempting SmartTour Coordinates bypass...", "info");
+                    var smartCoordsApiUrl = 'https://www.komoot.de/api/v007/smart_tours/' + trueNumericTourId + '/coordinates';
+                    try {
+                        coordsData = await fetchWithFallbacks(smartCoordsApiUrl, "Coordinates (Smart Bypass)");
+                    } catch(e) {
+                        // Fehlgeschlagen, wird unten abgefangen
+                    }
+                }
+            }
+
+            if (!coordsData || coordsData.error) {
+                var errorMsg = coordsData ? coordsData.error : "Unknown Error";
+                if (errorMsg === "AccessDenied" || errorMsg === "PrivateTour") {
+                     logMsg("NOTICE: This tour is purely PRIVATE and cannot be accessed via public endpoints.", "error");
+                     throw new Error("Access Denied: Tour is set to PRIVATE.");
+                }
+                throw new Error("API Error: " + errorMsg);
+            }
+            
             coordsDataItems = coordsData.items;
 
             if (!coordsDataItems || coordsDataItems.length === 0) {
                 throw new Error("No GPS data found. The tour might be PRIVATE or empty.");
             }
 
-            // 3. Hole POIs/Highlights
+            // 3. Hole POIs/Highlights (Gleicher Fallback für SmartTours)
             var poisData = [];
             try {
                 var poisApiUrl = 'https://www.komoot.de/api/v007/tours/' + trueNumericTourId + '/highlights';
-                var poisResponse = await fetchWithFallbacks(poisApiUrl, "POIs");
+                var poisResponse = await fetchWithFallbacks(poisApiUrl, "POIs (Standard)");
+                
+                if (poisResponse && poisResponse.error === "AccessDenied" && isSmartTour) {
+                    logMsg("Standard POI blocked. Trying Smart Bypass...", "warning");
+                    poisApiUrl = 'https://www.komoot.de/api/v007/smart_tours/' + trueNumericTourId + '/highlights';
+                    poisResponse = await fetchWithFallbacks(poisApiUrl, "POIs (Smart Bypass)");
+                }
+                
                 if (poisResponse && poisResponse._embedded && poisResponse._embedded.items) {
                     poisData = poisResponse._embedded.items;
                 }
