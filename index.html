@@ -87,7 +87,7 @@
         <h1>Komoot 2 GPX</h1>
     </div>
     <div class="meta-header">
-        v3.5 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
+        v3.6 Pro (SmartTour Fix) | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
     </div>
     
     <button type="button" id="installAppBtn">
@@ -265,7 +265,6 @@
         lines.push('<?xml version="1.0" encoding="UTF-8"?>');
         lines.push('<gpx version="1.1" creator="Komoot2GPX" xmlns="http://www.topografix.com/GPX/1/1">');
         
-        // --- Metadaten (Titel & Beschreibung) hinzufügen ---
         lines.push('  <metadata>');
         lines.push('    <name>' + safeName + '</name>');
         if (tourData && tourData.description) {
@@ -273,7 +272,6 @@
         }
         lines.push('  </metadata>');
 
-        // --- POIs (Highlights) als Wegpunkte hinzufügen ---
         if (pois && pois.length > 0) {
             logMsg('Adding ' + pois.length + ' Highlights/POIs to GPX...', "info");
             for (var j = 0; j < pois.length; j++) {
@@ -293,7 +291,6 @@
             }
         }
 
-        // --- GPS Track Koordinaten ---
         lines.push('  <trk><name>' + safeName + '</name><trkseg>');
         for (var i = 0; i < items.length; i++) {
             var pt = items[i];
@@ -353,7 +350,6 @@
             logMsg('Target: ID ' + tourId + ' (' + (isSmartTour ? 'Smart' : 'Standard') + ')', "info");
             
             var tourApiUrl = isSmartTour ? 'https://www.komoot.de/api/v007/discover_tours/' + tourId : 'https://www.komoot.de/api/v007/tours/' + tourId;
-            var coordsApiUrl = isSmartTour ? 'https://www.komoot.de/api/v007/smart_tours/' + tourId + '/coordinates' : 'https://www.komoot.de/api/v007/tours/' + tourId + '/coordinates';
 
             // 1. Hole Metadaten
             var tourData = await fetchWithFallbacks(tourApiUrl, "Metadata");
@@ -369,24 +365,51 @@
             var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
             var tourDistance = tourData.distance || 0; 
             
-            // 2. Hole Koordinaten
-            var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
+            // 2. Hole Koordinaten - SMART TOUR WORKAROUND
+            var coordsDataItems = [];
             
-            if (coordsData.error) {
-                if (coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
-                     logMsg("NOTICE: This tour is PRIVATE. If it's your own tour, please download it manually via the Komoot website or Komoot app (click the three dots -> Download GPX file).", "warning");
-                     throw new Error("Access Denied: This tour is set to PRIVATE.");
+            if (isSmartTour) {
+                // Bei SmartTours prüfen wir zuerst, ob die Koordinaten (bzw. der Track) 
+                // schon direkt in den Metadaten (_embedded.tour.path) stecken, um den MethodArgumentTypeMismatch zu vermeiden.
+                if (tourData._embedded && tourData._embedded.tour && tourData._embedded.tour._embedded && tourData._embedded.tour._embedded.coordinates) {
+                    logMsg("SmartTour: Extrahiere Koordinaten direkt aus Metadaten.", "success");
+                    coordsDataItems = tourData._embedded.tour._embedded.coordinates.items;
+                } else {
+                    // Fallback, wenn sie nicht drin sind, versuchen wir es über die echte Tour-ID statt der Smart-ID
+                    if (tourData.tour_id) {
+                        logMsg("SmartTour: Leite um auf Standard-Tour ID " + tourData.tour_id, "info");
+                        var fallbackApiUrl = 'https://www.komoot.de/api/v007/tours/' + tourData.tour_id + '/coordinates';
+                        var fallbackCoords = await fetchWithFallbacks(fallbackApiUrl, "Coordinates (Fallback)");
+                        coordsDataItems = fallbackCoords.items;
+                    } else {
+                        throw new Error("Konnte keine Koordinaten für diese SmartTour extrahieren.");
+                    }
                 }
-                throw new Error("API Error: " + coordsData.error);
+            } else {
+                // Standard Tour Request
+                var coordsApiUrl = 'https://www.komoot.de/api/v007/tours/' + tourId + '/coordinates';
+                var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
+                
+                if (coordsData.error) {
+                    if (coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
+                         logMsg("NOTICE: This tour is PRIVATE. If it's your own tour, please download it manually.", "warning");
+                         throw new Error("Access Denied: This tour is set to PRIVATE.");
+                    }
+                    throw new Error("API Error: " + coordsData.error);
+                }
+                coordsDataItems = coordsData.items;
             }
-            if (!coordsData.items || coordsData.items.length === 0) {
+
+            if (!coordsDataItems || coordsDataItems.length === 0) {
                 throw new Error("No GPS data found. The tour might be PRIVATE or empty.");
             }
 
-            // 3. Hole POIs/Highlights (Neu!)
+            // 3. Hole POIs/Highlights
             var poisData = [];
             try {
-                var poisApiUrl = isSmartTour ? 'https://www.komoot.de/api/v007/smart_tours/' + tourId + '/highlights' : 'https://www.komoot.de/api/v007/tours/' + tourId + '/highlights';
+                // Wenn SmartTour, nutze die zugrunde liegende echte Tour ID für POIs falls verfügbar
+                var poiFetchId = (isSmartTour && tourData.tour_id) ? tourData.tour_id : tourId;
+                var poisApiUrl = 'https://www.komoot.de/api/v007/tours/' + poiFetchId + '/highlights';
                 var poisResponse = await fetchWithFallbacks(poisApiUrl, "POIs");
                 if (poisResponse && poisResponse._embedded && poisResponse._embedded.items) {
                     poisData = poisResponse._embedded.items;
@@ -395,10 +418,8 @@
                 logMsg("No highlights found or skipped.", "info");
             }
             
-            renderMap(coordsData.items);
-            
-            // 4. Übergebe alles an den GPX Generator
-            generateGPX(tourName, coordsData.items, tourDistance, poisData, tourData);
+            renderMap(coordsDataItems);
+            generateGPX(tourName, coordsDataItems, tourDistance, poisData, tourData);
             
             btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Success!';
             
