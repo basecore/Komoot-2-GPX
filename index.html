@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -289,7 +289,7 @@
             border-bottom: 1px dashed rgba(189, 147, 249, 0.3);
             padding-bottom: 3px;
         }
-        .log-meta { color: #e67e22; font-style: italic; margin-left: 10px; }
+        .log-meta { color: #e67e22; font-style: italic; margin-left: 10px; line-height: 1.4; margin-bottom: 2px; }
 
         #map-container {
             width: 100%;
@@ -313,16 +313,6 @@
         .direction-arrow-wrap {
             background: transparent;
             border: none;
-        }
-
-        .direction-arrow {
-            width: 0;
-            height: 0;
-            border-left: 7px solid transparent;
-            border-right: 7px solid transparent;
-            border-bottom: 14px solid #f3f6f7;
-            filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
-            opacity: 0.9;
         }
 
         .leaflet-popup-content-wrapper,
@@ -367,16 +357,16 @@
     </div>
 
     <div class="meta-header">
-        v4.6 Smart Exporter | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank" rel="noopener noreferrer">basecore</a> | May 10, 2026
+        v4.7 Smart Exporter | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank" rel="noopener noreferrer">basecore</a> | May 10, 2026
     </div>
 
     <button type="button" id="installAppBtn">
         <svg viewBox="0 0 24 24"><path d="M17 1.01L7 .99C5.9 .99 5 1.9 5 3v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14zm-1 2H8v-1h8v1z"/></svg>
-        Install App on Device
+        App auf Gerät installieren
     </button>
 
     <div class="input-group">
-        <input type="url" id="tourUrl" placeholder="Paste Komoot URL (e.g. komoot.de/tour/123)" autocomplete="off">
+        <input type="url" id="tourUrl" placeholder="Komoot Link einfügen (z.B. komoot.de/tour/123)" autocomplete="off">
         <svg class="input-icon" viewBox="0 0 24 24"><path d="M10.59 13.41a1.996 1.996 0 0 1 0-2.82l3.18-3.18a2 2 0 1 1 2.83 2.83l-1.59 1.59h2.83l.17-.17a4 4 0 0 0-5.66-5.66l-3.18 3.18a4 4 0 0 0 5.66 5.66l.88-.88H12.88l-.29.29a1.996 1.996 0 0 1-2.82 0zM13.41 10.59a1.996 1.996 0 0 1 0 2.82l-3.18 3.18a2 2 0 1 1-2.83-2.83l1.59-1.59H6.17L6 12.34A4 4 0 0 0 11.66 18l3.18-3.18a4 4 0 0 0-5.66-5.66l-.88.88h2.83l.28-.29a1.996 1.996 0 0 1 2.82 0z"/></svg>
     </div>
 
@@ -390,7 +380,7 @@
 
     <button type="button" id="compileBtn" class="main-btn">
         <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v3h2V5h14v14H5v-3H3v3c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM11 16l5-4-5-4v3H3v2h8v3z"/></svg>
-        Compile & Preview
+        Kompilieren & Vorschau anzeigen
     </button>
 
     <div id="map-container"></div>
@@ -398,12 +388,12 @@
     <div id="actionButtons" class="button-stack" style="display:none;">
         <button type="button" id="invertBtn" class="secondary-btn">
             <svg viewBox="0 0 24 24"><path d="M7 7h11v2H7.83l2.58 2.59L9 13 4 8l5-5 1.41 1.41L7.83 7zM17 17H6v-2h10.17l-2.58-2.59L15 11l5 5-5 5-1.41-1.41L16.17 17z"/></svg>
-            <span id="invertBtnText">Invert GPS Track Direction</span>
+            <span id="invertBtnText">GPS-Richtung umkehren</span>
         </button>
 
         <button type="button" id="downloadBtn" class="main-btn">
             <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-            <span id="downloadBtnText">Download Route (Normal)</span>
+            <span id="downloadBtnText">Route herunterladen (Normal)</span>
         </button>
     </div>
 
@@ -465,7 +455,7 @@
         var consoleDiv = document.getElementById('debug-console');
         if (!consoleDiv) return;
         var time = new Date().toTimeString().split(' ')[0];
-        var isBlock = (type === 'success' || type === 'file');
+        var isBlock = (type === 'success' || type === 'file' || type === 'meta');
         var wrapStart = isBlock ? '<div style="width:100%">' : '';
         var wrapEnd = isBlock ? '</div>' : '';
         consoleDiv.innerHTML += wrapStart + '<div class="log-' + type + '"><span style="opacity:0.5">[' + time + ']</span> ' + message + '</div>' + wrapEnd;
@@ -834,16 +824,14 @@
         var rawSpacing = totalDistanceMeters / 15;
         var spacingMeters = 2000; // fallback default
 
-        if (totalDistanceMeters < 1000) spacingMeters = 100;       // < 1 km
-        else if (rawSpacing <= 250) spacingMeters = 250;           // ~3.5 km
-        else if (rawSpacing <= 500) spacingMeters = 500;           // ~7.5 km
-        else if (rawSpacing <= 1000) spacingMeters = 1000;         // ~15 km
-        else if (rawSpacing <= 2000) spacingMeters = 2000;         // ~30 km
-        else if (rawSpacing <= 5000) spacingMeters = 5000;         // ~75 km
-        else if (rawSpacing <= 10000) spacingMeters = 10000;       // ~150 km
-        else spacingMeters = 20000;                                // >150 km
-
-        logMsg("Dynamic arrow spacing applied: " + (spacingMeters >= 1000 ? (spacingMeters / 1000) + " km" : spacingMeters + " m"), "meta");
+        if (totalDistanceMeters < 1000) spacingMeters = 100;       
+        else if (rawSpacing <= 250) spacingMeters = 250;           
+        else if (rawSpacing <= 500) spacingMeters = 500;           
+        else if (rawSpacing <= 1000) spacingMeters = 1000;         
+        else if (rawSpacing <= 2000) spacingMeters = 2000;         
+        else if (rawSpacing <= 5000) spacingMeters = 5000;         
+        else if (rawSpacing <= 10000) spacingMeters = 10000;       
+        else spacingMeters = 20000;                                
 
         var acc = 0;
         var nextArrowAt = spacingMeters;
@@ -857,11 +845,16 @@
             if (acc >= nextArrowAt) {
                 var angle = bearingDegrees(prev.lat, prev.lng, cur.lat, cur.lng);
 
+                // Neuer, deutlicherer Pfeil (mit Schwanz) anstatt simplem Dreieck
+                var svgArrow = '<svg width="22" height="22" viewBox="0 0 24 24" style="transform: rotate(' + angle + 'deg); filter: drop-shadow(0px 2px 3px rgba(0,0,0,0.8));">' +
+                               '<path fill="#f3f6f7" stroke="#121416" stroke-width="1" stroke-linejoin="round" d="M12 2 L20 10 H15 V22 H9 V10 H4 L12 2 Z"/>' +
+                               '</svg>';
+
                 var icon = L.divIcon({
                     className: 'direction-arrow-wrap',
-                    html: '<div class="direction-arrow" style="transform: rotate(' + angle + 'deg);"></div>',
-                    iconSize: [16, 16],
-                    iconAnchor: [8, 8]
+                    html: svgArrow,
+                    iconSize: [22, 22],
+                    iconAnchor: [11, 11]
                 });
 
                 var marker = L.marker([cur.lat, cur.lng], {
@@ -934,7 +927,7 @@
                     opacity: 1,
                     fillOpacity: 1
                 });
-                loopStart.bindPopup(buildPopupHtml("Start & End", "Loop tour"));
+                loopStart.bindPopup(buildPopupHtml("Start & Ziel", "Rundtour"));
                 poiLayerGroup.addLayer(loopStart);
 
                 var loopEnd = L.circleMarker([endPt.lat, endPt.lng], {
@@ -945,7 +938,7 @@
                     opacity: 1,
                     fillOpacity: 1
                 });
-                loopEnd.bindPopup(buildPopupHtml("End", ""));
+                loopEnd.bindPopup(buildPopupHtml("Ziel", ""));
                 poiLayerGroup.addLayer(loopEnd);
             } else {
                 var startMarker = L.circleMarker([startPt.lat, startPt.lng], {
@@ -967,7 +960,7 @@
                     opacity: 1,
                     fillOpacity: 1
                 });
-                endMarker.bindPopup(buildPopupHtml("End", ""));
+                endMarker.bindPopup(buildPopupHtml("Ziel", ""));
                 poiLayerGroup.addLayer(endMarker);
             }
 
@@ -982,7 +975,6 @@
                 if (map) map.invalidateSize();
             }, 250);
 
-            logMsg("Map rendering complete", "info");
         } catch(e) {
             logMsg('Map Error: ' + e.message, "error");
         }
@@ -993,11 +985,11 @@
         var downloadTxt = document.getElementById('downloadBtnText');
 
         if (appState.previewInverted) {
-            invertTxt.textContent = "Show Normal Direction";
-            downloadTxt.textContent = "Download Route (Inverted)";
+            invertTxt.textContent = "Normale Richtung anzeigen";
+            downloadTxt.textContent = "Route herunterladen (Reverse)";
         } else {
-            invertTxt.textContent = "Invert GPS Track Direction";
-            downloadTxt.textContent = "Download Route (Normal)";
+            invertTxt.textContent = "GPS-Richtung umkehren";
+            downloadTxt.textContent = "Route herunterladen (Normal)";
         }
     }
 
@@ -1022,20 +1014,14 @@
             link.click();
             document.body.removeChild(link);
 
-            logMsg("Download completed successfully!", "success");
-            logMsg("File saved to folder: Downloads/" + filename, "file");
-            logMsg("--- Embedded metadata ---", "info");
-            logMsg("↳ Tour description: " + (meta.hasDescription ? "Yes" : "No"), "meta");
-            logMsg("↳ Description source: " + (meta.descriptionSource || "None"), "meta");
-            logMsg("↳ POIs / Highlights: " + (meta.poiCount > 0 ? meta.poiCount + " found" : "None"), "meta");
-            logMsg("↳ POI source: " + (meta.poiSource || "None"), "meta");
+            logMsg("Download erfolgreich!", "success");
         } catch (e) {
             logMsg("Download Error: " + e.message, "error");
         }
     }
 
     function generateGPX(name, items, pois, tourData, meta) {
-        logMsg("Compiling GPX...", "system");
+        logMsg("Erstelle GPX...", "system");
 
         var safeName = escapeXml(name);
         var filename = fileSafeName(name) + '.gpx';
@@ -1094,7 +1080,7 @@
     }
 
     function generateKML(name, items, pois, tourData, meta) {
-        logMsg("Compiling KML...", "system");
+        logMsg("Erstelle KML...", "system");
 
         var safeName = escapeXml(name);
         var filename = fileSafeName(name) + '.kml';
@@ -1153,7 +1139,7 @@
     }
 
     function generateCSV(name, items, pois, tourData, meta) {
-        logMsg("Compiling CSV...", "system");
+        logMsg("Erstelle CSV...", "system");
 
         var filename = fileSafeName(name) + '.csv';
         var rows = [];
@@ -1202,7 +1188,7 @@
 
     function doDownload() {
         if (!appState.compiled) {
-            logMsg("Nothing compiled yet. Please run preview first.", "warning");
+            logMsg("Es wurde noch nichts kompiliert.", "warning");
             return;
         }
 
@@ -1216,12 +1202,6 @@
             descriptionSource: appState.descriptionSource,
             poiSource: appState.poiSource
         };
-
-        if (isReversed) {
-            logMsg("Preparing inverted export...", "meta");
-        } else {
-            logMsg("Preparing normal export...", "meta");
-        }
 
         if (format === 'kml') {
             generateKML(exportName, track, appState.pois, appState.tourData, meta);
@@ -1263,21 +1243,19 @@
         appState.previewInverted = false;
 
         if (!urlInput) {
-            logMsg("Error: Please provide a URL", "error");
+            logMsg("Fehler: Bitte einen Link einfügen", "error");
             return;
         }
 
         btn.disabled = true;
-        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Processing...';
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Lade Daten...';
 
         try {
             var parsed = getTourInfoFromUrl(urlInput);
             var tourId = parsed.tourId;
             var isSmartTour = parsed.isSmartTour;
 
-            if (!tourId) throw new Error("Invalid URL format");
-
-            logMsg('Target: ID ' + tourId + ' (' + (isSmartTour ? 'Smart' : 'Standard') + ')', "info");
+            if (!tourId) throw new Error("Ungültiges URL-Format");
 
             var numericTourId = isSmartTour ? tourId.replace(/\D/g, '') : tourId;
 
@@ -1289,30 +1267,32 @@
                 ? 'https://www.komoot.de/api/v007/smart_tours/' + numericTourId + '/coordinates'
                 : 'https://www.komoot.de/api/v007/tours/' + numericTourId + '/coordinates';
 
-            var tourData = await fetchWithFallbacks(tourApiUrl, "Metadata");
+            var tourData = await fetchWithFallbacks(tourApiUrl, "Metadaten");
 
             if (tourData.error) {
                 if (tourData.error === "AccessDenied" || tourData.error === "PrivateTour") {
-                    throw new Error("Access Denied: This tour is set to PRIVATE.");
+                    throw new Error("Zugriff verweigert (Tour ist privat).");
                 }
-                throw new Error("API Error: " + tourData.error);
+                throw new Error("API Fehler: " + tourData.error);
             }
 
             var tourName = tourData.name || tourData.title || ('Komoot_Tour_' + numericTourId);
-            var tourDistance = tourData.distance || 0;
+            var tourDistance = tourData.distance || 0; // in metern
+            var durationSec = tourData.time_in_motion || tourData.duration || 0; // in sekunden
+
             var descriptionSource = getDescription(tourData) ? "API" : "None";
 
-            var coordsData = await fetchWithFallbacks(coordsApiUrl, isSmartTour ? "Coordinates (Smart)" : "Coordinates (Standard)");
+            var coordsData = await fetchWithFallbacks(coordsApiUrl, isSmartTour ? "Koordinaten (Smart)" : "Koordinaten (Standard)");
 
             if (coordsData.error) {
                 if (coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
-                    throw new Error("Access Denied: This tour is set to PRIVATE.");
+                    throw new Error("Zugriff verweigert (Tour ist privat).");
                 }
-                throw new Error("API Error: " + coordsData.error);
+                throw new Error("API Fehler: " + coordsData.error);
             }
 
             if (!coordsData.items || coordsData.items.length === 0) {
-                throw new Error("No GPS data found.");
+                throw new Error("Keine GPS-Daten gefunden.");
             }
 
             var poisData = [];
@@ -1330,7 +1310,7 @@
                     poiSource = "API";
                 }
             } catch (e) {
-                logMsg("No highlights found or skipped.", "warning");
+                logMsg("Keine POIs/Highlights gefunden.", "warning");
             }
 
             var needHtmlDescription = !getDescription(tourData);
@@ -1342,23 +1322,21 @@
                         ? 'https://www.komoot.de/smarttour/' + numericTourId
                         : 'https://www.komoot.de/tour/' + numericTourId;
 
-                    var html = await fetchTextWithFallbacks(publicTourUrl, "Public Tour HTML");
+                    var html = await fetchTextWithFallbacks(publicTourUrl, "HTML Fallback");
                     var fallbackData = parseKomootHtmlFallback(html);
 
                     if (needHtmlDescription && fallbackData.description) {
                         if (!tourData.tour_information) tourData.tour_information = {};
                         tourData.tour_information.description = fallbackData.description;
                         descriptionSource = fallbackData.source || "HTML";
-                        logMsg("↳ Tour description found via HTML fallback", "meta");
                     }
 
                     if (needHtmlPois && fallbackData.pois && fallbackData.pois.length > 0) {
                         poisData = fallbackData.pois;
                         poiSource = fallbackData.source || "HTML";
-                        logMsg("↳ POIs / Highlights found via HTML fallback: " + poisData.length, "meta");
                     }
                 } catch (e) {
-                    logMsg("HTML fallback not available: " + e.message, "warning");
+                    logMsg("HTML fallback nicht verfügbar: " + e.message, "warning");
                 }
             }
 
@@ -1374,24 +1352,44 @@
             appState.descriptionSource = descriptionSource || "None";
             appState.poiSource = poiSource || "None";
 
-            logMsg("Compile success: " + coordsData.items.length + " pts | " + (tourDistance ? (tourDistance / 1000).toFixed(2) + " km" : "Unknown length"), "success");
-            logMsg("Description source: " + appState.descriptionSource, "meta");
-            logMsg("POI source: " + appState.poiSource, "meta");
+            // Metadaten für Log formatieren
+            var finalDesc = getDescription(tourData);
+            var excerpt = finalDesc.length > 90 ? finalDesc.substring(0, 90) + '...' : finalDesc;
+            if (!excerpt) excerpt = "Keine Beschreibung hinterlegt.";
+
+            var distStr = tourDistance ? (tourDistance / 1000).toFixed(2) + " km" : "Unbekannt";
+            var durationStr = "";
+            if (durationSec > 0) {
+                var hrs = Math.floor(durationSec / 3600);
+                var mins = Math.floor((durationSec % 3600) / 60);
+                durationStr = (hrs > 0 ? hrs + "h " : "") + mins + "m";
+            } else {
+                durationStr = "Unbekannt";
+            }
+
+            logMsg("Compile erfolgreich (" + coordsData.items.length + " GPS Punkte)", "success");
+
+            // Neues Info-Feld im Terminal
+            logMsg("------- TOUR INFOS -------", "meta");
+            logMsg("Titel: " + tourName, "meta");
+            logMsg("Länge: " + distStr + " | Dauer: " + durationStr, "meta");
+            logMsg("Info: \"" + excerpt + "\"", "meta");
+            logMsg("--------------------------", "meta");
 
             renderMap(appState.track, appState.pois);
             updateSmartButtons();
 
             actionButtons.style.display = 'grid';
 
-            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Preview Ready';
+            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Vorschau bereit';
 
         } catch (error) {
-            logMsg('ABORT: ' + error.message, "error");
-            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> Failed';
+            logMsg('ABBRUCH: ' + error.message, "error");
+            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> Fehler';
         } finally {
             setTimeout(function() {
                 btn.disabled = false;
-                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v3h2V5h14v14H5v-3H3v3c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM11 16l5-4-5-4v3H3v2h8v3z"/></svg> Compile & Preview';
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v3h2V5h14v14H5v-3H3v3c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM11 16l5-4-5-4v3H3v2h8v3z"/></svg> Kompilieren & Vorschau anzeigen';
             }, 2500);
         }
     }
@@ -1407,7 +1405,7 @@
             invertBtn.addEventListener('click', function() {
                 if (!appState.compiled) return;
                 appState.previewInverted = !appState.previewInverted;
-                logMsg("Preview switched to " + (appState.previewInverted ? "INVERTED" : "NORMAL"), "meta");
+                logMsg("Vorschau-Richtung: " + (appState.previewInverted ? "UMGEKEHRT" : "NORMAL"), "info");
                 updatePreviewRender();
             });
         }
@@ -1439,7 +1437,7 @@
                 var urlInput = document.getElementById('tourUrl');
                 if (urlInput) {
                     urlInput.value = cleanUrl + "?shared=true";
-                    logMsg("Share Target active. Booting sequence...", "system");
+                    logMsg("Share Target aktiv. Starte Prozess...", "system");
                     setTimeout(function() { compilePreview(); }, 1000);
                 }
             }
