@@ -59,7 +59,7 @@
         .log-info { color: #8bb4e7; }
         .log-file { color: #3498db; background: rgba(52, 152, 219, 0.1); padding: 5px 8px; border-radius: 4px; display: inline-block; margin: 4px 0; border-left: 3px solid #3498db; }
         .log-success { color: #97b536; font-weight: bold; background: rgba(151,181,54,0.15); padding: 4px 8px; border-radius: 4px; border-left: 3px solid #97b536; display: inline-block; margin: 4px 0;}
-        .log-warning { color: #f1c40f; opacity: 0.8; }
+        .log-warning { color: #f1c40f; opacity: 0.8; margin-bottom: 5px; }
         .log-error { color: #ff5252; font-weight: bold; }
         .log-system { color: #bd93f9; font-weight: bold; margin-bottom: 5px; border-bottom: 1px dashed rgba(189, 147, 249, 0.3); padding-bottom: 3px;}
         
@@ -87,7 +87,7 @@
         <h1>Komoot 2 GPX</h1>
     </div>
     <div class="meta-header">
-        v3.3 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a>
+        v3.4 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
     </div>
     
     <button type="button" id="installAppBtn">
@@ -318,6 +318,7 @@
             
             if (tourData.error) {
                 if (tourData.error === "AccessDenied" || tourData.error === "PrivateTour") {
+                     logMsg("NOTICE: This tour is PRIVATE. If it's your own tour, please download it manually via the Komoot website or Komoot app (click the three dots -> Download GPX file).", "warning");
                      throw new Error("Access Denied: This tour is set to PRIVATE.");
                 }
                 throw new Error("API Error: " + tourData.error);
@@ -330,6 +331,7 @@
             
             if (coordsData.error) {
                 if (coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
+                     logMsg("NOTICE: This tour is PRIVATE. If it's your own tour, please download it manually via the Komoot website or Komoot app (click the three dots -> Download GPX file).", "warning");
                      throw new Error("Access Denied: This tour is set to PRIVATE.");
                 }
                 throw new Error("API Error: " + coordsData.error);
