@@ -367,7 +367,7 @@
     </div>
 
     <div class="meta-header">
-        v4.4 Smart Exporter | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank" rel="noopener noreferrer">basecore</a>
+        v4.6 Smart Exporter | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank" rel="noopener noreferrer">basecore</a> | May 10, 2026
     </div>
 
     <button type="button" id="installAppBtn">
@@ -670,9 +670,7 @@
         return str
             .replace(/\\\\/g, '\\u005c')
             .replace(/\\"/g, '"')
-            .replace(/\
-/g, '
-')
+            .replace(/\\n/g, '\n')
             .replace(/\\r/g, '')
             .replace(/\\t/g, '\t')
             .replace(/\\u003c/g, '<')
@@ -693,7 +691,9 @@
         };
 
         try {
-            var match = html.match(/kmtBoot.setProps("([sS]*?)");/);
+            var regexKmt = new RegExp('kmtBoot\\.setProps\\("([\\s\\S]*?)"\\);');
+            var match = html.match(regexKmt);
+
             if (match && match[1]) {
                 var raw = decodeKomootPropsString(match[1]);
                 var props = JSON.parse(raw);
@@ -759,7 +759,8 @@
             }
 
             if (!result.description) {
-                var metaMatch = html.match(/<metas+name="description"s+content="([^"]+)"/i);
+                var regexMeta = new RegExp('<meta\\s+name="description"\\s+content="([^"]+)"', 'i');
+                var metaMatch = html.match(regexMeta);
                 if (metaMatch && metaMatch[1]) {
                     result.description = metaMatch[1];
                     if (result.source === "None") result.source = "HTML meta";
@@ -823,7 +824,27 @@
     function addDirectionArrows(coords) {
         if (!arrowLayerGroup || !coords || coords.length < 2) return;
 
-        var spacingMeters = 2000;
+        // 1. Calculate actual distance of the track
+        var totalDistanceMeters = 0;
+        for (var i = 1; i < coords.length; i++) {
+            totalDistanceMeters += haversineMeters(coords[i - 1].lat, coords[i - 1].lng, coords[i].lat, coords[i].lng);
+        }
+
+        // 2. Determine dynamic spacing (Target is ~15 arrows for the route)
+        var rawSpacing = totalDistanceMeters / 15;
+        var spacingMeters = 2000; // fallback default
+
+        if (totalDistanceMeters < 1000) spacingMeters = 100;       // < 1 km
+        else if (rawSpacing <= 250) spacingMeters = 250;           // ~3.5 km
+        else if (rawSpacing <= 500) spacingMeters = 500;           // ~7.5 km
+        else if (rawSpacing <= 1000) spacingMeters = 1000;         // ~15 km
+        else if (rawSpacing <= 2000) spacingMeters = 2000;         // ~30 km
+        else if (rawSpacing <= 5000) spacingMeters = 5000;         // ~75 km
+        else if (rawSpacing <= 10000) spacingMeters = 10000;       // ~150 km
+        else spacingMeters = 20000;                                // >150 km
+
+        logMsg("Dynamic arrow spacing applied: " + (spacingMeters >= 1000 ? (spacingMeters / 1000) + " km" : spacingMeters + " m"), "meta");
+
         var acc = 0;
         var nextArrowAt = spacingMeters;
 
@@ -1064,8 +1085,7 @@
         lines.push('  </trk>');
         lines.push('</gpx>');
 
-        downloadBlob(lines.join('
-'), filename, 'application/gpx+xml', {
+        downloadBlob(lines.join('\n'), filename, 'application/gpx+xml', {
             hasDescription: !!description,
             descriptionSource: meta.descriptionSource,
             poiCount: poiCount,
@@ -1124,8 +1144,7 @@
         lines.push('  </Document>');
         lines.push('</kml>');
 
-        downloadBlob(lines.join('
-'), filename, 'application/vnd.google-earth.kml+xml', {
+        downloadBlob(lines.join('\n'), filename, 'application/vnd.google-earth.kml+xml', {
             hasDescription: !!description,
             descriptionSource: meta.descriptionSource,
             poiCount: poiCount,
@@ -1173,8 +1192,7 @@
             }
         }
 
-        downloadBlob(rows.join('
-'), filename, 'text/csv;charset=utf-8', {
+        downloadBlob(rows.join('\n'), filename, 'text/csv;charset=utf-8', {
             hasDescription: !!getDescription(tourData),
             descriptionSource: meta.descriptionSource,
             poiCount: poiCount,
@@ -1190,7 +1208,7 @@
 
         var format = document.getElementById('exportFormat').value;
         var isReversed = appState.previewInverted;
-        
+
         var track = isReversed ? reverseTrackKeepingTime(appState.track) : cloneTrack(appState.track);
         var exportName = appState.tourName + (isReversed ? ' Inverted' : '');
 
@@ -1261,7 +1279,7 @@
 
             logMsg('Target: ID ' + tourId + ' (' + (isSmartTour ? 'Smart' : 'Standard') + ')', "info");
 
-            var numericTourId = isSmartTour ? tourId.replace(/D/g, '') : tourId;
+            var numericTourId = isSmartTour ? tourId.replace(/\D/g, '') : tourId;
 
             var tourApiUrl = isSmartTour
                 ? 'https://www.komoot.de/api/v007/discover_tours/' + tourId
