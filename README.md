@@ -7,7 +7,7 @@
 [![Live App](https://img.shields.io/badge/Open_Web_App-97b536?style=for-the-badge&logo=appveyor)](https://basecore.github.io/Komoot-2-GPX/)
 [![Made with AI](https://img.shields.io/badge/AI_Generated-Perplexity_&_Gemini-blue?style=for-the-badge&logo=google)](https://basecore.github.io/Komoot-2-GPX/)
 
-A lightweight, purely client-side Progressive Web App (PWA) to quickly download public Komoot tours as GPX files without needing a premium subscription. Fully optimized for smartphones and seamless import into ecosystems like Garmin Connect.
+A lightweight, purely client-side Progressive Web App (PWA) to quickly download public Komoot tours as GPX, KML or CSV files without needing a premium subscription. Fully optimized for smartphones and seamless import into ecosystems like Garmin Connect.
 
 👉 **[Launch Web App](https://basecore.github.io/Komoot-2-GPX/)**
 
@@ -17,20 +17,18 @@ A lightweight, purely client-side Progressive Web App (PWA) to quickly download 
   <img src="image/screenshot2.png" alt="Map Preview Screenshot" width="45%">
 </p>
 
-## ✨ Features (v4.0 Pro)
+## ✨ Features (v4.7 Smart Exporter)
 
-* **📍 Advanced Interactive Map:** Displays the exact route on an OpenStreetMap interface before downloading. Discovered Highlights/POIs are rendered as interactive markers (🟠), alongside distinct, color-coded Start (🟢) and End (🔴) points with clickable popups.
-* **📌 POI & Highlight Integration:** Automatically extracts Points of Interest (Highlights) and embeds them directly into the generated GPX file as standard Waypoints (`<wpt>`).
-* **📝 Metadata Extraction:** Grabs the official tour description and name from Komoot and writes them cleanly into the GPX `<metadata>` headers.
+* **📍 Advanced Interactive Map with Direction Arrows:** Displays the exact route on an OpenStreetMap interface before downloading. Smart, dynamic SVG arrows automatically scale their spacing based on the route's length to perfectly visualize the travel direction.
+* **🔄 GPS Track Inversion (Reverse):** Want to ride the route the other way around? Invert the GPS direction with a single click in the interactive preview, see the arrows flip, and download the exact reversed route.
+* **📌 POI & Highlight Integration:** Automatically extracts Points of Interest (Highlights) and embeds them directly into the generated GPX file as standard Waypoints (`<wpt>`). Rendered as interactive markers (🟠), alongside distinct Start (🟢) and End (🔴) points.
+* **📝 Deep Metadata Extraction & Terminal Console:** Grabs the official tour description, length, duration, and name from Komoot. The built-in developer console displays a quick excerpt of all found metadata to validate your track before downloading.
 * **🧠 SmartTour 403 Bypass Engine:** Intelligently unwraps special alphanumeric SmartTour IDs (e.g., `e176887173`) and automatically reroutes blocked `AccessDenied` requests to alternative API endpoints, allowing downloads of pure Collections/SmartTours.
-* **🚀 Native Android "Share" Integration:** Through the Web Share Target API, this app seamlessly integrates into your smartphone's OS. Hit "Share -> Other Apps" inside the official Komoot app, select "Komoot 2 GPX", and the PWA will instantly launch, grab the link, and auto-start the GPX download in the background. No copy-pasting required!
-* **🔒 Private Tour Detection:** Intelligently detects if a shared tour is strictly private and provides clear, descriptive feedback in the console instead of generic API errors.
-* **🛡️ Anti-Adblocker Engine ("Wrapped" Mode):** Bypasses aggressive network adblockers (like the ones built into iodéOS) using a specialized data wrapper to securely fetch coordinates without getting blocked.
-* **🔧 HTTP 406 Bypass:** Injects custom `application/hal+json` headers to prevent Komoot's direct API from rejecting the fetch requests.
-* **🎨 Pro UI & Live Debug Console:** A beautiful, responsive card-based interface with smooth animations, custom SVG icons, and a developer-grade terminal window that shows you exactly what metadata was found and where files are saved.
-* **🌐 8-Layer Proxy Fallback Engine:** Since Komoot strictly blocks public CORS proxies, this app features a robust, automated rotation of 8 independent proxy servers. If one proxy fails, it instantly switches to the next one—ensuring maximum uptime.
-* **⌚ Garmin-Ready Data:** Generates 100% compliant XML/GPX files containing elevation (`<ele>`), timestamps (`<time>`), and waypoints (`<wpt>`), which are mandatory for activity tracking in Garmin Connect.
-* **📱 100% PWA Installable:** Meets Chrome's strict install criteria (including maskable icons). Install it directly on your home screen via the built-in "Install App" button to use it like a native app in full-screen mode.
+* **🚀 Native Android "Share" Integration:** Through the Web Share Target API, this app seamlessly integrates into your smartphone's OS. Hit "Share -> Other Apps" inside the official Komoot app, select "Komoot 2 GPX", and the PWA will instantly launch, grab the link, and auto-start the compilation in the background. No copy-pasting required!
+* **🛡️ Bulletproof HTML Fallback & Regex Fix:** Uses a highly resilient HTML parsing engine to scrape route descriptions and POIs directly from the DOM when the standard Komoot API denies access, now fully secured against complex Regex breaking scenarios.
+* **🌐 8-Layer Proxy Fallback Engine:** Since Komoot strictly blocks public CORS proxies, this app features a robust, automated rotation of independent proxy servers (including "Wrapped" mode against adblockers). If one fails, it switches instantly.
+* **⌚ Garmin-Ready Data:** Generates 100% compliant XML/GPX files containing elevation (`<ele>`), timestamps (`<time>`), and waypoints (`<wpt>`), which are mandatory for activity tracking in Garmin Connect. KML and CSV exports are also supported.
+* **📱 100% PWA Installable:** Meets Chrome's strict install criteria. Install it directly on your home screen via the built-in "Install App" button to use it like a native app in full-screen mode.
 
 ## 📱 How to Use (Smartphone & Desktop)
 
@@ -39,14 +37,16 @@ A lightweight, purely client-side Progressive Web App (PWA) to quickly download 
 2. Click the blue **"📱 Install App on Device"** button (or use the browser menu to "Add to Home Screen").
 3. Open your official Komoot app and find a public tour.
 4. Tap "Share" -> "More Apps..." and select **Komoot 2 GPX**.
-5. The app opens, auto-pastes the link, and triggers the GPX download instantly.
+5. The app opens, auto-pastes the link, and compiles the route.
+6. Check the map and download the normal or reversed file!
 
 ### Option B: The Manual Workflow (Any Device)
 1. Open the Komoot App or Website.
 2. Navigate to a **public** tour or smarttour collection.
 3. Use the "Share" function to copy the tour link to your clipboard (e.g., `https://www.komoot.de/tour/123456789`).
 4. Open the **[Komoot-2-GPX App](https://basecore.github.io/Komoot-2-GPX/)**.
-5. Paste the link and click "Preview & Download GPX".
+5. Paste the link and click "Compile & Preview".
+6. Check the metadata, invert the route if needed, and hit download.
 
 ---
 
@@ -74,7 +74,7 @@ To bypass strict CORS (Cross-Origin Resource Sharing) policies and access the op
 ## 🤖 Credits
 
 * **Developer:** [basecore](https://github.com/basecore)
-* **AI Assistance:** The architecture, UI design, code logic, and proxy fallback mechanism were initially developed with **Gemini 3.1**. The advanced v4.0 updates (POI integration, Advanced SmartTour bypass, metadata parsing, and color-coded map markers) were engineered with **Perplexity AI**.
+* **AI Assistance:** The architecture, UI design, code logic, and proxy fallback mechanism were initially developed with **Gemini 3.1**. The advanced updates (POI integration, SmartTour bypass, dynamic direction arrows, reverse routing, and HTML fallbacks) were engineered with **Perplexity AI**.
 
 ---
 **Disclaimer:** This project is not affiliated with or endorsed by Komoot in any way. It strictly uses publicly accessible API endpoints. Designed for personal and private use only.
