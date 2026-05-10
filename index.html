@@ -47,6 +47,13 @@
         .input-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; fill: #666; pointer-events: none; }
         input[type="url"]:focus + .input-icon { fill: var(--primary); }
         
+        /* New Controls */
+        .controls-row { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+        .format-select { background: var(--input-bg); color: white; border: 2px solid transparent; border-radius: 12px; padding: 12px 15px; font-family: inherit; font-size: 14px; outline: none; cursor: pointer; flex: 1; min-width: 120px; transition: all 0.2s ease;}
+        .format-select:focus { border-color: var(--primary); }
+        .checkbox-label { display: flex; align-items: center; gap: 10px; color: var(--text-main); font-size: 14px; cursor: pointer; flex: 2; min-width: 180px; padding: 10px 5px; font-weight: 600;}
+        .checkbox-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
+
         #debug-console { margin-top: 25px; padding: 15px; background: var(--console-bg); border-radius: 10px; font-family: 'Courier New', Courier, monospace; font-size: 12px; height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); line-height: 1.6; }
         .log-links { margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; }
         .log-links a { color: var(--primary); text-decoration: none; font-size: 13px; font-weight: 600; }
@@ -88,7 +95,7 @@
         <h1>Komoot 2 GPX</h1>
     </div>
     <div class="meta-header">
-        v4.0 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
+        v4.1 Pro Ultimate | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
     </div>
     
     <button type="button" id="installAppBtn">
@@ -101,9 +108,21 @@
         <svg class="input-icon" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
     </div>
 
+    <!-- New Options Row -->
+    <div class="controls-row">
+        <select id="exportFormat" class="format-select">
+            <option value="gpx">GPX (Garmin/Wahoo)</option>
+            <option value="kml">KML (Google Maps)</option>
+        </select>
+        <label class="checkbox-label">
+            <input type="checkbox" id="reverseRoute">
+            Route umkehren (Start ⮂ Ziel)
+        </label>
+    </div>
+
     <button type="button" id="downloadBtn" class="main-btn">
         <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-        Preview & Download GPX
+        Preview & Download
     </button>
     
     <div id="debug-console">
@@ -186,12 +205,7 @@
                 var reqHeaders = { 'Accept': 'application/hal+json, application/json, */*' };
                 if (proxy.name === 'cors.sh') reqHeaders['x-cors-api-key'] = 'temp_81f0b093380c2f8f8ed97405d4142f74';
 
-                var response = await fetch(proxyUrl, { 
-                    headers: reqHeaders, 
-                    cache: 'no-store',
-                    signal: controller.signal
-                });
-                
+                var response = await fetch(proxyUrl, { headers: reqHeaders, cache: 'no-store', signal: controller.signal });
                 clearTimeout(timeoutId);
 
                 if (!response.ok) throw new Error('HTTP ' + response.status);
@@ -250,50 +264,56 @@
                     
                     if (poiLat && poiLng) {
                         var marker = L.circleMarker([poiLat, poiLng], {
-                            radius: 5,
-                            fillColor: "#e67e22", // Orange for POIs
-                            color: "#fff",
-                            weight: 2,
-                            opacity: 1,
-                            fillOpacity: 1
+                            radius: 5, fillColor: "#e67e22", color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
                         });
-                        
-                        marker.bindPopup("<b>" + poiName + "</b>");
+                        marker.bindPopup("<b>🟠 " + poiName + "</b>");
                         marker.on('mouseover', function(e) { this.openPopup(); });
-                        
                         poiLayerGroup.addLayer(marker);
                     }
                 }
             }
 
-            // Render Start & End points (rendered last so they sit on top)
+            // Start & Ziel Marker (mit Loop-Erkennung)
             if (coords && coords.length > 0) {
-                // Start Marker
-                var startMarker = L.circleMarker([coords[0].lat, coords[0].lng], {
-                    radius: 8,
-                    fillColor: "#2ecc71", // Green for Start
-                    color: "#fff",
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 1
-                });
-                startMarker.bindPopup("<b>🟢 Start</b>");
-                startMarker.on('mouseover', function(e) { this.openPopup(); });
-                poiLayerGroup.addLayer(startMarker);
-
-                // End Marker
+                var startPt = coords[0];
                 var endPt = coords[coords.length - 1];
-                var endMarker = L.circleMarker([endPt.lat, endPt.lng], {
-                    radius: 8,
-                    fillColor: "#e74c3c", // Red for End
-                    color: "#fff",
-                    weight: 2,
-                    opacity: 1,
-                    fillOpacity: 1
-                });
-                endMarker.bindPopup("<b>🔴 Ziel</b>");
-                endMarker.on('mouseover', function(e) { this.openPopup(); });
-                poiLayerGroup.addLayer(endMarker);
+                
+                // Prüfen ob Rundtour (Start und Ziel liegen übereinander)
+                var dLat = Math.abs(startPt.lat - endPt.lat);
+                var dLng = Math.abs(startPt.lng - endPt.lng);
+                var isLoop = (dLat < 0.0002 && dLng < 0.0002);
+
+                if (isLoop) {
+                    // Bullseye: Startkreis groß (Grün), Zielkreis klein (Rot) im Zentrum
+                    var startMarker = L.circleMarker([startPt.lat, startPt.lng], {
+                        radius: 11, fillColor: "#2ecc71", color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
+                    });
+                    startMarker.bindPopup("<b>🟢 Start & 🔴 Ziel (Rundtour)</b>");
+                    startMarker.on('mouseover', function(e) { this.openPopup(); });
+                    poiLayerGroup.addLayer(startMarker);
+
+                    var endMarker = L.circleMarker([endPt.lat, endPt.lng], {
+                        radius: 5, fillColor: "#e74c3c", color: "#fff", weight: 1, opacity: 1, fillOpacity: 1
+                    });
+                    endMarker.bindPopup("<b>🔴 Ziel</b>");
+                    endMarker.on('mouseover', function(e) { this.openPopup(); });
+                    poiLayerGroup.addLayer(endMarker);
+                } else {
+                    // Normale Anzeige
+                    var startMarker = L.circleMarker([startPt.lat, startPt.lng], {
+                        radius: 8, fillColor: "#2ecc71", color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
+                    });
+                    startMarker.bindPopup("<b>🟢 Start</b>");
+                    startMarker.on('mouseover', function(e) { this.openPopup(); });
+                    poiLayerGroup.addLayer(startMarker);
+
+                    var endMarker = L.circleMarker([endPt.lat, endPt.lng], {
+                        radius: 8, fillColor: "#e74c3c", color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
+                    });
+                    endMarker.bindPopup("<b>🔴 Ziel</b>");
+                    endMarker.on('mouseover', function(e) { this.openPopup(); });
+                    poiLayerGroup.addLayer(endMarker);
+                }
             }
 
             setTimeout(function() { map.invalidateSize(); }, 300);
@@ -305,28 +325,38 @@
 
     function escapeXml(unsafe) {
         return (unsafe || "").toString().replace(/[<>&'"]/g, function (c) {
-            switch (c) {
-                case '<': return '&lt;';
-                case '>': return '&gt;';
-                case '&': return '&amp;';
-                case '\'': return '&apos;';
-                case '"': return '&quot;';
-            }
+            switch (c) { case '<': return '&lt;'; case '>': return '&gt;'; case '&': return '&amp;'; case '\'': return '&apos;'; case '"': return '&quot;'; }
         });
     }
 
-    function generateGPX(name, items, distance, pois, tourData) {
-        var distKm = distance ? (distance / 1000).toFixed(2) + " km" : "Unknown length";
+    function executeDownload(content, filename, mimeType, hasDesc, poiCount, formatName) {
+        try {
+            var blob = new Blob([content], { type: mimeType });
+            var link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            logMsg("Download completed successfully!", "success");
+            logMsg("File saved to folder: Downloads/" + filename, "file");
+            logMsg("--- Integrierte Metadaten in " + formatName + " ---", "info");
+            logMsg("↳ Tour-Beschreibung: " + (hasDesc ? "Ja" : "Nein"), "meta");
+            logMsg("↳ POIs / Highlights: " + (poiCount > 0 ? poiCount + " Stück" : "Keine"), "meta");
+        } catch(e) {
+            logMsg('Download Error: ' + e.message, "error");
+        }
+    }
+
+    function generateGPX(name, items, pois, tourData) {
         logMsg('Compiling GPX...', "system");
-        logMsg('Stats: ' + items.length + ' pts | ' + distKm, "info");
-        
         var safeName = escapeXml(name);
         var filename = name.replace(/[^a-z0-9äöüß]/gi, '_').toLowerCase() + '.gpx';
-        
         var lines = [];
+        
         lines.push('<?xml version="1.0" encoding="UTF-8"?>');
         lines.push('<gpx version="1.1" creator="Komoot2GPX" xmlns="http://www.topografix.com/GPX/1/1">');
-        
         lines.push('  <metadata>');
         lines.push('    <name>' + safeName + '</name>');
         
@@ -343,13 +373,10 @@
                 var poi = pois[j];
                 var poiLat = poi.location ? poi.location.lat : poi.lat;
                 var poiLng = poi.location ? poi.location.lng : poi.lng;
-                var poiName = poi.name || poi.title || "Highlight";
-                var poiDesc = poi.description || "";
-
                 if (poiLat && poiLng) {
                     lines.push('  <wpt lat="' + poiLat + '" lon="' + poiLng + '">');
-                    lines.push('    <name>' + escapeXml(poiName) + '</name>');
-                    if (poiDesc) lines.push('    <desc>' + escapeXml(poiDesc) + '</desc>');
+                    lines.push('    <name>' + escapeXml(poi.name || poi.title || "Highlight") + '</name>');
+                    if (poi.description) lines.push('    <desc>' + escapeXml(poi.description) + '</desc>');
                     lines.push('    <sym>Generic</sym>');
                     lines.push('  </wpt>');
                     poiCount++;
@@ -365,37 +392,64 @@
             if (pt.t) lines.push('        <time>' + new Date(pt.t).toISOString() + '</time>');
             lines.push('      </trkpt>');
         }
-        
         lines.push('    </trkseg></trk></gpx>');
-        var gpxString = lines.join(String.fromCharCode(10));
+        
+        executeDownload(lines.join('\n'), filename, 'application/gpx+xml', hasDescription, poiCount, 'GPX');
+    }
 
-        try {
-            var blob = new Blob([gpxString], { type: "application/gpx+xml" });
-            
-            var link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = filename;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            logMsg("Download completed successfully!", "success");
-            logMsg("File saved to folder: Downloads/" + filename, "file");
-            logMsg("--- Integrierte Metadaten in GPX ---", "info");
-            if (hasDescription) {
-                logMsg("↳ Tour-Beschreibung: Ja", "meta");
-            } else {
-                logMsg("↳ Tour-Beschreibung: Nein", "meta");
-            }
-            if (poiCount > 0) {
-                logMsg("↳ POIs / Highlights: " + poiCount + " Stück hinzugefügt", "meta");
-            } else {
-                logMsg("↳ POIs / Highlights: Keine gefunden", "meta");
-            }
-
-        } catch(e) {
-            logMsg('Download Error: ' + e.message, "error");
+    function generateKML(name, items, pois, tourData) {
+        logMsg('Compiling KML for Google Maps...', "system");
+        var safeName = escapeXml(name);
+        var filename = name.replace(/[^a-z0-9äöüß]/gi, '_').toLowerCase() + '.kml';
+        var lines = [];
+        
+        lines.push('<?xml version="1.0" encoding="UTF-8"?>');
+        lines.push('<kml xmlns="http://www.opengis.net/kml/2.2">');
+        lines.push('  <Document>');
+        lines.push('    <name>' + safeName + '</name>');
+        
+        var hasDescription = false;
+        if (tourData && tourData.description) {
+            lines.push('    <description>' + escapeXml(tourData.description) + '</description>');
+            hasDescription = true;
         }
+        lines.push('    <Style id="track"><LineStyle><color>ff36b597</color><width>5</width></LineStyle></Style>');
+
+        var poiCount = 0;
+        if (pois && pois.length > 0) {
+            for (var j = 0; j < pois.length; j++) {
+                var poi = pois[j];
+                var poiLat = poi.location ? poi.location.lat : poi.lat;
+                var poiLng = poi.location ? poi.location.lng : poi.lng;
+                if (poiLat && poiLng) {
+                    lines.push('    <Placemark>');
+                    lines.push('      <name>' + escapeXml(poi.name || poi.title || "Highlight") + '</name>');
+                    if (poi.description) lines.push('      <description>' + escapeXml(poi.description) + '</description>');
+                    lines.push('      <Point><coordinates>' + poiLng + ',' + poiLat + ',0</coordinates></Point>');
+                    lines.push('    </Placemark>');
+                    poiCount++;
+                }
+            }
+        }
+
+        lines.push('    <Placemark>');
+        lines.push('      <name>Route Track</name>');
+        lines.push('      <styleUrl>#track</styleUrl>');
+        lines.push('      <LineString><tessellate>1</tessellate><coordinates>');
+        
+        var coordList = [];
+        for (var i = 0; i < items.length; i++) {
+            var ele = items[i].alt !== undefined ? items[i].alt : 0;
+            coordList.push(items[i].lng + ',' + items[i].lat + ',' + ele);
+        }
+        lines.push(coordList.join(' '));
+        
+        lines.push('      </coordinates></LineString>');
+        lines.push('    </Placemark>');
+        lines.push('  </Document>');
+        lines.push('</kml>');
+        
+        executeDownload(lines.join('\n'), filename, 'application/vnd.google-earth.kml+xml', hasDescription, poiCount, 'KML');
     }
 
     async function startExport() {
@@ -403,8 +457,10 @@
         var btn = document.getElementById('downloadBtn');
         var consoleDiv = document.getElementById('debug-console');
         var mapDiv = document.getElementById('map-container');
+        var formatSelect = document.getElementById('exportFormat').value;
+        var reverseRoute = document.getElementById('reverseRoute').checked;
 
-        consoleDiv.innerHTML = '<div class="log-system">user@komoot-exporter:~$ start --url</div>';
+        consoleDiv.innerHTML = '<div class="log-system">user@komoot-exporter:~$ start --url --format=' + formatSelect + '</div>';
         mapDiv.classList.remove('visible');
 
         if (!urlInput) { logMsg("Error: Please provide a URL", "error"); return; }
@@ -428,28 +484,18 @@
             
             var tourApiUrl = isSmartTour ? 'https://www.komoot.de/api/v007/discover_tours/' + tourId : 'https://www.komoot.de/api/v007/tours/' + tourId;
 
-            // 1. Hole Metadaten
             var tourData = await fetchWithFallbacks(tourApiUrl, "Metadata");
             
             if (tourData.error) {
                 if (tourData.error === "AccessDenied" || tourData.error === "PrivateTour") {
-                     logMsg("NOTICE: This tour is PRIVATE. If it's your own tour, please download it manually.", "warning");
+                     logMsg("NOTICE: This tour is PRIVATE.", "warning");
                      throw new Error("Access Denied: This tour is set to PRIVATE.");
                 }
                 throw new Error("API Error: " + tourData.error);
             }
 
             var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
-            var tourDistance = tourData.distance || 0; 
-            
-            // 2. Hole Koordinaten - SMART TOUR 403 BYPASS
-            var coordsDataItems = [];
-            var trueNumericTourId = tourId; 
-            
-            if (isSmartTour) {
-                trueNumericTourId = tourId.replace(/\D/g,'');
-                logMsg("SmartTour: Extrahierte echte Tour-ID: " + trueNumericTourId, "info");
-            }
+            var trueNumericTourId = isSmartTour ? tourId.replace(/\D/g,'') : tourId; 
             
             var coordsApiUrl = 'https://www.komoot.de/api/v007/tours/' + trueNumericTourId + '/coordinates';
             var coordsData = null;
@@ -460,42 +506,39 @@
                 logMsg("Standard Coordinates API Failed. Checking SmartTour Fallback...", "warning");
             }
             
-            // AUTOMATISCHER RETTUNGS-VERSUCH BEI 403 (Z.B. REINE SMART TOURS)
             if (!coordsData || coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
                 if (isSmartTour) {
-                    logMsg("Tour blocked on standard endpoint. Attempting SmartTour Coordinates bypass...", "info");
+                    logMsg("Attempting SmartTour Coordinates bypass...", "info");
                     var smartCoordsApiUrl = 'https://www.komoot.de/api/v007/smart_tours/' + trueNumericTourId + '/coordinates';
-                    try {
-                        coordsData = await fetchWithFallbacks(smartCoordsApiUrl, "Coordinates (Smart Bypass)");
-                    } catch(e) {
-                        // handled below
-                    }
+                    try { coordsData = await fetchWithFallbacks(smartCoordsApiUrl, "Coordinates (Smart Bypass)"); } catch(e) {}
                 }
             }
 
             if (!coordsData || coordsData.error) {
                 var errorMsg = coordsData ? coordsData.error : "Unknown Error";
-                if (errorMsg === "AccessDenied" || errorMsg === "PrivateTour") {
-                     logMsg("NOTICE: This tour is purely PRIVATE and cannot be accessed via public endpoints.", "error");
-                     throw new Error("Access Denied: Tour is set to PRIVATE.");
-                }
                 throw new Error("API Error: " + errorMsg);
             }
             
-            coordsDataItems = coordsData.items;
+            var coordsDataItems = coordsData.items;
+            if (!coordsDataItems || coordsDataItems.length === 0) throw new Error("No GPS data found.");
 
-            if (!coordsDataItems || coordsDataItems.length === 0) {
-                throw new Error("No GPS data found. The tour might be PRIVATE or empty.");
+            // LOGIK: Route umkehren, falls gewünscht
+            if (reverseRoute) {
+                logMsg("Modifying Data: Reversing route direction...", "meta");
+                var originalTimes = coordsDataItems.map(function(p) { return p.t; });
+                coordsDataItems.reverse();
+                // Zeitstempel wiederherstellen, damit Zeit vorwärts läuft
+                for(var i=0; i<coordsDataItems.length; i++) {
+                    coordsDataItems[i].t = originalTimes[i];
+                }
             }
 
-            // 3. Hole POIs/Highlights
             var poisData = [];
             try {
                 var poisApiUrl = 'https://www.komoot.de/api/v007/tours/' + trueNumericTourId + '/highlights';
                 var poisResponse = await fetchWithFallbacks(poisApiUrl, "POIs (Standard)");
                 
                 if (poisResponse && poisResponse.error === "AccessDenied" && isSmartTour) {
-                    logMsg("Standard POI blocked. Trying Smart Bypass...", "warning");
                     poisApiUrl = 'https://www.komoot.de/api/v007/smart_tours/' + trueNumericTourId + '/highlights';
                     poisResponse = await fetchWithFallbacks(poisApiUrl, "POIs (Smart Bypass)");
                 }
@@ -507,8 +550,15 @@
                 logMsg("No highlights found or skipped.", "info");
             }
             
+            logMsg('Stats: ' + coordsDataItems.length + ' pts', "info");
+            
             renderMap(coordsDataItems, poisData);
-            generateGPX(tourName, coordsDataItems, tourDistance, poisData, tourData);
+            
+            if (formatSelect === 'kml') {
+                generateKML(tourName + (reverseRoute ? " (Reversed)" : ""), coordsDataItems, poisData, tourData);
+            } else {
+                generateGPX(tourName + (reverseRoute ? " (Reversed)" : ""), coordsDataItems, poisData, tourData);
+            }
             
             btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Success!';
             
@@ -518,7 +568,7 @@
         } finally {
             setTimeout(function() { 
                 btn.disabled = false; 
-                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Preview & Download GPX';
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Preview & Download';
             }, 3000);
         }
     }
