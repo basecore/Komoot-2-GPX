@@ -62,6 +62,7 @@
         .log-warning { color: #f1c40f; opacity: 0.8; margin-bottom: 5px; }
         .log-error { color: #ff5252; font-weight: bold; }
         .log-system { color: #bd93f9; font-weight: bold; margin-bottom: 5px; border-bottom: 1px dashed rgba(189, 147, 249, 0.3); padding-bottom: 3px;}
+        .log-meta { color: #e67e22; font-style: italic; margin-left: 10px;}
         
         #map-container { width: 100%; height: 250px; margin-top: 20px; border-radius: 12px; display: none; border: 2px solid rgba(255,255,255,0.1); opacity: 0; transition: opacity 0.5s ease; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 1; }
         #map-container.visible { opacity: 1; display: block; }
@@ -87,7 +88,7 @@
         <h1>Komoot 2 GPX</h1>
     </div>
     <div class="meta-header">
-        v3.7 Pro (SmartTour Fix) | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
+        v3.9 Pro (Map POIs) | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
     </div>
     
     <button type="button" id="installAppBtn">
@@ -122,6 +123,7 @@
 <script>
     var map = null;
     var trackLayer = null;
+    var poiLayerGroup = null;
 
     let deferredPrompt;
     const installBtn = document.getElementById('installAppBtn');
@@ -217,7 +219,8 @@
         throw new Error('All routes dead. Last error: ' + lastError);
     }
 
-    function renderMap(coords) {
+    // UPDATE: renderMap nutzt jetzt auch die POIs zum Zeichnen auf die Karte
+    function renderMap(coords, pois) {
         try {
             var mapDiv = document.getElementById('map-container');
             mapDiv.classList.add('visible');
@@ -226,7 +229,12 @@
                 map = L.map('map-container');
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             }
+            
+            // Alten Track und alte POIs löschen
             if (trackLayer) map.removeLayer(trackLayer);
+            if (poiLayerGroup) map.removeLayer(poiLayerGroup);
+            
+            poiLayerGroup = L.layerGroup().addTo(map);
 
             var latLngs = [];
             for (var i = 0; i < coords.length; i++) latLngs.push([coords[i].lat, coords[i].lng]);
@@ -234,6 +242,36 @@
             trackLayer = L.polyline(latLngs, { color: '#97b536', weight: 4, lineCap: 'round', lineJoin: 'round' }).addTo(map);
             map.fitBounds(trackLayer.getBounds());
             
+            // POIs als Marker hinzufügen
+            if (pois && pois.length > 0) {
+                for (var j = 0; j < pois.length; j++) {
+                    var poi = pois[j];
+                    var poiLat = poi.location ? poi.location.lat : poi.lat;
+                    var poiLng = poi.location ? poi.location.lng : poi.lng;
+                    var poiName = poi.name || poi.title || "Highlight";
+                    
+                    if (poiLat && poiLng) {
+                        var marker = L.circleMarker([poiLat, poiLng], {
+                            radius: 6,
+                            fillColor: "#e67e22",
+                            color: "#fff",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 1
+                        });
+                        
+                        marker.bindPopup("<b>" + poiName + "</b>");
+                        
+                        // Hover Event für Popup
+                        marker.on('mouseover', function(e) {
+                            this.openPopup();
+                        });
+                        
+                        poiLayerGroup.addLayer(marker);
+                    }
+                }
+            }
+
             setTimeout(function() { map.invalidateSize(); }, 300);
             logMsg("Map rendering complete", "info");
         } catch(e) {
@@ -255,7 +293,7 @@
 
     function generateGPX(name, items, distance, pois, tourData) {
         var distKm = distance ? (distance / 1000).toFixed(2) + " km" : "Unknown length";
-        logMsg('Compiling GPX with POIs...', "system");
+        logMsg('Compiling GPX...', "system");
         logMsg('Stats: ' + items.length + ' pts | ' + distKm, "info");
         
         var safeName = escapeXml(name);
@@ -267,13 +305,16 @@
         
         lines.push('  <metadata>');
         lines.push('    <name>' + safeName + '</name>');
+        
+        var hasDescription = false;
         if (tourData && tourData.description) {
             lines.push('    <desc>' + escapeXml(tourData.description) + '</desc>');
+            hasDescription = true;
         }
         lines.push('  </metadata>');
 
+        var poiCount = 0;
         if (pois && pois.length > 0) {
-            logMsg('Adding ' + pois.length + ' Highlights/POIs to GPX...', "info");
             for (var j = 0; j < pois.length; j++) {
                 var poi = pois[j];
                 var poiLat = poi.location ? poi.location.lat : poi.lat;
@@ -287,6 +328,7 @@
                     if (poiDesc) lines.push('    <desc>' + escapeXml(poiDesc) + '</desc>');
                     lines.push('    <sym>Generic</sym>');
                     lines.push('  </wpt>');
+                    poiCount++;
                 }
             }
         }
@@ -315,6 +357,17 @@
             
             logMsg("Download completed successfully!", "success");
             logMsg("File saved to folder: Downloads/" + filename, "file");
+            logMsg("--- Integrierte Metadaten in GPX ---", "info");
+            if (hasDescription) {
+                logMsg("↳ Tour-Beschreibung: Ja", "meta");
+            } else {
+                logMsg("↳ Tour-Beschreibung: Nein", "meta");
+            }
+            if (poiCount > 0) {
+                logMsg("↳ POIs / Highlights: " + poiCount + " Stück hinzugefügt", "meta");
+            } else {
+                logMsg("↳ POIs / Highlights: Keine gefunden", "meta");
+            }
 
         } catch(e) {
             logMsg('Download Error: ' + e.message, "error");
@@ -367,15 +420,13 @@
             
             // 2. Hole Koordinaten - SMART TOUR EXTRAKTION FIX
             var coordsDataItems = [];
-            var trueNumericTourId = tourId; // Standardmäßig die ID selbst
+            var trueNumericTourId = tourId; 
             
             if (isSmartTour) {
-                // Bei SmartTours wie 'e176887173' extrahieren wir die echte numerische ID, indem wir alles nicht-numerische (wie das 'e') entfernen
                 trueNumericTourId = tourId.replace(/\D/g,'');
                 logMsg("SmartTour: Extrahierte echte Tour-ID: " + trueNumericTourId, "info");
             }
             
-            // Hole Koordinaten immer über den Standard-Endpunkt mit der rein numerischen ID
             var coordsApiUrl = 'https://www.komoot.de/api/v007/tours/' + trueNumericTourId + '/coordinates';
             var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
             
@@ -392,7 +443,7 @@
                 throw new Error("No GPS data found. The tour might be PRIVATE or empty.");
             }
 
-            // 3. Hole POIs/Highlights über die numerische ID
+            // 3. Hole POIs/Highlights
             var poisData = [];
             try {
                 var poisApiUrl = 'https://www.komoot.de/api/v007/tours/' + trueNumericTourId + '/highlights';
@@ -404,7 +455,7 @@
                 logMsg("No highlights found or skipped.", "info");
             }
             
-            renderMap(coordsDataItems);
+            renderMap(coordsDataItems, poisData);
             generateGPX(tourName, coordsDataItems, tourDistance, poisData, tourData);
             
             btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Success!';
