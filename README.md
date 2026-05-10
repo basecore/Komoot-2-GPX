@@ -5,7 +5,7 @@
 # Komoot-2-GPX Exporter 🚴‍♂️⛰️
 
 [![Live App](https://img.shields.io/badge/Open_Web_App-97b536?style=for-the-badge&logo=appveyor)](https://basecore.github.io/Komoot-2-GPX/)
-[![Made with Gemini 3.1](https://img.shields.io/badge/AI_Generated-Gemini_3.1-blue?style=for-the-badge&logo=google)](https://gemini.google.com/)
+[![Made with AI](https://img.shields.io/badge/AI_Generated-Perplexity_&_Gemini-blue?style=for-the-badge&logo=google)](https://basecore.github.io/Komoot-2-GPX/)
 
 A lightweight, purely client-side Progressive Web App (PWA) to quickly download public Komoot tours as GPX files without needing a premium subscription. Fully optimized for smartphones and seamless import into ecosystems like Garmin Connect.
 
@@ -17,17 +17,20 @@ A lightweight, purely client-side Progressive Web App (PWA) to quickly download 
   <img src="image/screenshot2.png" alt="Map Preview Screenshot" width="45%">
 </p>
 
-## ✨ Features (v3.3 Pro)
+## ✨ Features (v3.9 Pro)
 
+* **📌 POI & Highlight Integration:** Automatically extracts Points of Interest (Highlights) and embeds them directly into the generated GPX file as standard Waypoints (`<wpt>`).
+* **📝 Metadata Extraction:** Grabs the official tour description and name from Komoot and writes them cleanly into the GPX `<metadata>` headers.
+* **📍 Live Map Markers:** Discovered Highlights/POIs are rendered as interactive, clickable markers directly on the Leaflet map preview before downloading.
+* **🧠 Advanced SmartTour Engine:** Intelligently unwraps special alphanumeric SmartTour IDs (e.g., `e176887173`) into their native numeric equivalents to completely bypass `MethodArgumentTypeMismatch` API crashes.
 * **🚀 Native Android "Share" Integration:** Through the Web Share Target API, this app seamlessly integrates into your smartphone's OS. Hit "Share -> Other Apps" inside the official Komoot app, select "Komoot 2 GPX", and the PWA will instantly launch, grab the link, and auto-start the GPX download in the background. No copy-pasting required!
 * **🔒 Private Tour Detection:** Intelligently detects if a shared tour is restricted or private and provides clear, descriptive feedback in the console instead of generic API errors.
 * **🛡️ Anti-Adblocker Engine ("Wrapped" Mode):** Bypasses aggressive network adblockers (like the ones built into iodéOS) using a specialized data wrapper to securely fetch coordinates without getting blocked.
 * **🔧 HTTP 406 Bypass:** Injects custom `application/hal+json` headers to prevent Komoot's direct API from rejecting the fetch requests.
-* **🎨 Pro UI & Live Debug Console:** A beautiful, responsive card-based interface with smooth animations, custom SVG icons, and a developer-grade terminal window that shows you exactly what the app is currently doing and where files are saved.
-* **🔄 Smarttour & Discovery Support:** Automatically detects whether you pasted a regular user tour (`/tour/`) or a generated Komoot collection (`/smarttour/`) and routes API calls accordingly.
+* **🎨 Pro UI & Live Debug Console:** A beautiful, responsive card-based interface with smooth animations, custom SVG icons, and a developer-grade terminal window that shows you exactly what metadata was found and where files are saved.
 * **🌐 8-Layer Proxy Fallback Engine:** Since Komoot strictly blocks public CORS proxies, this app features a robust, automated rotation of 8 independent proxy servers. If one proxy fails, it instantly switches to the next one—ensuring maximum uptime.
-* **🗺️ Interactive Leaflet Map:** Displays the exact route on an OpenStreetMap interface before the download begins, allowing you to visually verify the tour.
-* **⌚ Garmin-Ready Data:** Generates 100% compliant XML/GPX files containing both elevation (`<ele>`) and precise timestamps (`<time>`), which are mandatory for activity tracking in Garmin Connect.
+* **🗺️ Interactive Leaflet Map:** Displays the exact route and POIs on an OpenStreetMap interface before the download begins, allowing you to visually verify the tour.
+* **⌚ Garmin-Ready Data:** Generates 100% compliant XML/GPX files containing elevation (`<ele>`), timestamps (`<time>`), and waypoints (`<wpt>`), which are mandatory for activity tracking in Garmin Connect.
 * **📱 100% PWA Installable:** Meets Chrome's strict install criteria (including maskable icons). Install it directly on your home screen via the built-in "Install App" button to use it like a native app in full-screen mode.
 
 ## 📱 How to Use (Smartphone & Desktop)
@@ -72,7 +75,7 @@ To bypass strict CORS (Cross-Origin Resource Sharing) policies and access the op
 ## 🤖 Credits
 
 * **Developer:** [basecore](https://github.com/basecore)
-* **AI Assistance:** The architecture, UI design, code logic, and the advanced 8-layer proxy fallback mechanism were entirely developed and optimized with the help of **Gemini 3.1**.
+* **AI Assistance:** The architecture, UI design, code logic, and proxy fallback mechanism were initially developed with **Gemini 3.1**. The advanced v3.9 updates (POI integration, SmartTour API bypass, metadata parsing, and live map markers) were engineered with **Perplexity AI**.
 
 ---
 **Disclaimer:** This project is not affiliated with or endorsed by Komoot in any way. It strictly uses publicly accessible API endpoints. Designed for personal and private use only.
