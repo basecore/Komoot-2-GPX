@@ -1,78 +1,460 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Komoot 2 GPX Exporter</title>
-    
+
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" href="image/icon-192.png">
     <meta name="theme-color" content="#1e2124">
-    
+
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    
+
     <style>
         :root {
-            --bg-color: #121416; --card-bg: #1e2124; --input-bg: #2c2f33;
-            --text-main: #ffffff; --text-muted: #a0a5a9;
-            --primary: #97b536; --primary-hover: #86a32d;
-            --install: #3498db; --install-hover: #2980b9;
-            --console-bg: #0d0f11; --border-radius: 16px;
+            --bg-color: #121416;
+            --card-bg: #1e2124;
+            --input-bg: #2c2f33;
+            --text-main: #ffffff;
+            --text-muted: #a0a5a9;
+            --primary: #97b536;
+            --primary-hover: #86a32d;
+            --install: #3498db;
+            --install-hover: #2980b9;
+            --console-bg: #0d0f11;
+            --soft: rgba(255,255,255,0.06);
+            --soft-2: rgba(255,255,255,0.12);
+            --border-radius: 16px;
+            --orange: #e67e22;
+            --green: #2ecc71;
+            --red: #e74c3c;
+            --arrow: #e8ecef;
         }
-        * { box-sizing: border-box; }
-        body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg-color); color: var(--text-main); margin: 0; padding: 20px; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; }
-        .container { background: var(--card-bg); padding: 30px; border-radius: var(--border-radius); width: 100%; max-width: 550px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.05); margin-top: 2vh; }
-        .header-wrapper { display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 5px; }
-        .app-logo { width: 42px; height: 42px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        h1 { margin: 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px; }
-        .meta-header { text-align: center; font-size: 13px; color: var(--text-muted); margin-bottom: 25px; font-weight: 400; }
-        .meta-header a { color: var(--primary); text-decoration: none; font-weight: 600; transition: color 0.2s;}
-        .meta-header a:hover { color: #ffffff; }
-        
-        button { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); font-family: inherit; }
-        button svg { width: 20px; height: 20px; fill: currentColor; }
-        
-        #installAppBtn { background: var(--install); color: white; margin-bottom: 20px; display: none; box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3); }
-        #installAppBtn:hover { background: var(--install-hover); transform: translateY(-2px); }
-        
-        .main-btn { background: var(--primary); color: white; box-shadow: 0 4px 15px rgba(151, 181, 54, 0.2); }
-        .main-btn:hover:not(:disabled) { background: var(--primary-hover); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(151, 181, 54, 0.4); }
-        .main-btn:disabled { background: #444; color: #888; cursor: not-allowed; box-shadow: none; transform: none; }
-        
-        .input-group { position: relative; margin-bottom: 15px; }
-        input[type="url"] { width: 100%; padding: 16px 16px 16px 45px; border: 2px solid transparent; border-radius: 12px; background: var(--input-bg); color: white; font-size: 15px; font-family: inherit; outline: none; transition: all 0.2s ease; }
-        input[type="url"]::placeholder { color: #666; }
-        input[type="url"]:focus { border-color: var(--primary); background: #232528; }
-        .input-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; fill: #666; pointer-events: none; }
-        input[type="url"]:focus + .input-icon { fill: var(--primary); }
-        
-        /* New Controls */
-        .controls-row { display: flex; gap: 15px; margin-bottom: 20px; align-items: center; justify-content: space-between; flex-wrap: wrap; }
-        .format-select { background: var(--input-bg); color: white; border: 2px solid transparent; border-radius: 12px; padding: 12px 15px; font-family: inherit; font-size: 14px; outline: none; cursor: pointer; flex: 1; min-width: 120px; transition: all 0.2s ease;}
-        .format-select:focus { border-color: var(--primary); }
-        .checkbox-label { display: flex; align-items: center; gap: 10px; color: var(--text-main); font-size: 14px; cursor: pointer; flex: 2; min-width: 180px; padding: 10px 5px; font-weight: 600;}
-        .checkbox-label input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
 
-        #debug-console { margin-top: 25px; padding: 15px; background: var(--console-bg); border-radius: 10px; font-family: 'Courier New', Courier, monospace; font-size: 12px; height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.05); box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); line-height: 1.6; }
-        .log-links { margin-top: 12px; display: flex; gap: 12px; flex-wrap: wrap; }
-        .log-links a { color: var(--primary); text-decoration: none; font-size: 13px; font-weight: 600; }
+        * { box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            background: var(--bg-color);
+            color: var(--text-main);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            width: 100%;
+            max-width: 620px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.05);
+            margin-top: 2vh;
+        }
+
+        .header-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 5px;
+        }
+
+        .app-logo {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .meta-header {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-bottom: 25px;
+            font-weight: 400;
+        }
+
+        .meta-header a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .meta-header a:hover { color: #ffffff; }
+
+        button, select {
+            font-family: inherit;
+        }
+
+        button {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        button svg {
+            width: 20px;
+            height: 20px;
+            fill: currentColor;
+        }
+
+        #installAppBtn {
+            background: var(--install);
+            color: white;
+            margin-bottom: 18px;
+            display: none;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        #installAppBtn:hover {
+            background: var(--install-hover);
+            transform: translateY(-2px);
+        }
+
+        .main-btn {
+            background: var(--primary);
+            color: white;
+            box-shadow: 0 4px 15px rgba(151, 181, 54, 0.2);
+        }
+
+        .main-btn:hover:not(:disabled) {
+            background: var(--primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(151, 181, 54, 0.4);
+        }
+
+        .ghost-btn {
+            background: rgba(255,255,255,0.07);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .ghost-btn:hover:not(:disabled) {
+            background: rgba(255,255,255,0.12);
+            transform: translateY(-1px);
+        }
+
+        .download-btn {
+            background: #2a2f34;
+            color: white;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .download-btn:hover:not(:disabled) {
+            background: #353b40;
+            transform: translateY(-1px);
+        }
+
+        .download-btn.reverse {
+            background: #3c2a34;
+        }
+
+        .download-btn.reverse:hover:not(:disabled) {
+            background: #503544;
+        }
+
+        button:disabled {
+            background: #444 !important;
+            color: #888 !important;
+            cursor: not-allowed;
+            box-shadow: none !important;
+            transform: none !important;
+        }
+
+        .input-group {
+            position: relative;
+            margin-bottom: 14px;
+        }
+
+        input[type="url"] {
+            width: 100%;
+            padding: 16px 16px 16px 45px;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            background: var(--input-bg);
+            color: white;
+            font-size: 15px;
+            outline: none;
+            transition: all 0.2s ease;
+        }
+
+        input[type="url"]::placeholder { color: #666; }
+
+        input[type="url"]:focus {
+            border-color: var(--primary);
+            background: #232528;
+        }
+
+        .input-icon {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 18px;
+            height: 18px;
+            fill: #666;
+            pointer-events: none;
+        }
+
+        input[type="url"]:focus + .input-icon { fill: var(--primary); }
+
+        .tool-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .tool-card {
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .tool-label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-muted);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .tool-card select {
+            width: 100%;
+            padding: 11px 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            background: var(--input-bg);
+            color: white;
+            outline: none;
+        }
+
+        #debug-console {
+            margin-top: 20px;
+            padding: 15px;
+            background: var(--console-bg);
+            border-radius: 10px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12px;
+            height: 210px;
+            overflow-y: auto;
+            border: 1px solid rgba(255,255,255,0.05);
+            box-shadow: inset 0 2px 10px rgba(0,0,0,0.5);
+            line-height: 1.6;
+        }
+
+        .log-links {
+            margin-top: 12px;
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .log-links a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
         .log-links a:hover { color: #ffffff; }
+
         #debug-console::-webkit-scrollbar { width: 6px; }
         #debug-console::-webkit-scrollbar-track { background: transparent; }
         #debug-console::-webkit-scrollbar-thumb { background: #444; border-radius: 10px; }
         #debug-console::-webkit-scrollbar-thumb:hover { background: #666; }
-        
+
         .log-info { color: #8bb4e7; }
-        .log-file { color: #3498db; background: rgba(52, 152, 219, 0.1); padding: 5px 8px; border-radius: 4px; display: inline-block; margin: 4px 0; border-left: 3px solid #3498db; }
-        .log-success { color: #97b536; font-weight: bold; background: rgba(151,181,54,0.15); padding: 4px 8px; border-radius: 4px; border-left: 3px solid #97b536; display: inline-block; margin: 4px 0;}
-        .log-warning { color: #f1c40f; opacity: 0.8; margin-bottom: 5px; }
+        .log-file {
+            color: #3498db;
+            background: rgba(52, 152, 219, 0.1);
+            padding: 5px 8px;
+            border-radius: 4px;
+            display: inline-block;
+            margin: 4px 0;
+            border-left: 3px solid #3498db;
+        }
+        .log-success {
+            color: #97b536;
+            font-weight: bold;
+            background: rgba(151,181,54,0.15);
+            padding: 4px 8px;
+            border-radius: 4px;
+            border-left: 3px solid #97b536;
+            display: inline-block;
+            margin: 4px 0;
+        }
+        .log-warning { color: #f1c40f; opacity: 0.92; }
         .log-error { color: #ff5252; font-weight: bold; }
-        .log-system { color: #bd93f9; font-weight: bold; margin-bottom: 5px; border-bottom: 1px dashed rgba(189, 147, 249, 0.3); padding-bottom: 3px;}
-        .log-meta { color: #e67e22; font-style: italic; margin-left: 10px;}
-        
-        #map-container { width: 100%; height: 250px; margin-top: 20px; border-radius: 12px; display: none; border: 2px solid rgba(255,255,255,0.1); opacity: 0; transition: opacity 0.5s ease; box-shadow: 0 5px 15px rgba(0,0,0,0.3); z-index: 1; }
-        #map-container.visible { opacity: 1; display: block; }
+        .log-system {
+            color: #bd93f9;
+            font-weight: bold;
+            margin-bottom: 5px;
+            border-bottom: 1px dashed rgba(189, 147, 249, 0.3);
+            padding-bottom: 3px;
+        }
+        .log-meta { color: #e67e22; font-style: italic; margin-left: 10px; }
+
+        #map-wrap {
+            position: relative;
+            display: none;
+            margin-top: 18px;
+        }
+
+        #map-wrap.visible {
+            display: block;
+        }
+
+        #map-container {
+            width: 100%;
+            height: 310px;
+            border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.1);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .map-badge {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            z-index: 500;
+            background: rgba(13,15,17,0.88);
+            color: white;
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(6px);
+            line-height: 1.45;
+        }
+
+        .map-badge .dot {
+            display: inline-block;
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+
+        .map-badge .arrow-mini {
+            display: inline-block;
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-bottom: 9px solid var(--arrow);
+            margin-right: 6px;
+            transform: rotate(90deg);
+            vertical-align: middle;
+            filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5));
+        }
+
+        .direction-arrow-wrap {
+            background: transparent;
+            border: none;
+        }
+
+        .direction-arrow {
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-bottom: 14px solid var(--arrow);
+            filter: drop-shadow(0 1px 3px rgba(0,0,0,0.8));
+            opacity: 0.9;
+        }
+
+        .download-panel {
+            display: none;
+            margin-top: 16px;
+            gap: 10px;
+            grid-template-columns: 1fr;
+        }
+
+        .download-panel.visible {
+            display: grid;
+        }
+
+        .preview-note {
+            margin-top: 12px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px;
+            padding: 12px;
+            color: var(--text-muted);
+            font-size: 13px;
+            display: none;
+        }
+
+        .preview-note.visible {
+            display: block;
+        }
+
+        .status-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 999px;
+            background: rgba(151,181,54,0.14);
+            color: #d7ec9a;
+            padding: 5px 10px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .status-pill.reverse {
+            background: rgba(231,76,60,0.14);
+            color: #ffbeb8;
+        }
+
+        .leaflet-popup-content-wrapper,
+        .leaflet-popup-tip {
+            background: #111417;
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .leaflet-popup-content {
+            margin: 10px 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        @media (max-width: 560px) {
+            .container { padding: 20px; }
+            .tool-row { grid-template-columns: 1fr; }
+            #map-container { height: 280px; }
+        }
     </style>
 
     <script>
@@ -83,7 +465,9 @@
         };
 
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(function(err) { console.log('SW Error:', err); });
+            navigator.serviceWorker.register('sw.js').catch(function(err) {
+                console.log('SW Error:', err);
+            });
         }
     </script>
 </head>
@@ -94,47 +478,84 @@
         <img src="image/icon-512.png" alt="Logo" class="app-logo" onerror="this.style.display='none'">
         <h1>Komoot 2 GPX</h1>
     </div>
+
     <div class="meta-header">
-        v4.1 Pro Ultimate | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
+        v4.2 Pro Preview | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank" rel="noopener noreferrer">basecore</a> | May 10, 2026
     </div>
-    
+
     <button type="button" id="installAppBtn">
         <svg viewBox="0 0 24 24"><path d="M17 1.01L7 .99C5.9 .99 5 1.9 5 3v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14zm-1 2H8v-1h8v1z"/></svg>
         Install App on Device
     </button>
-    
+
     <div class="input-group">
         <input type="url" id="tourUrl" placeholder="Paste Komoot URL (e.g. komoot.de/tour/123)" autocomplete="off">
-        <svg class="input-icon" viewBox="0 0 24 24"><path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1 h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/></svg>
+        <svg class="input-icon" viewBox="0 0 24 24"><path d="M10.59 13.41a1.996 1.996 0 0 1 0-2.82l3.18-3.18a2 2 0 1 1 2.83 2.83l-1.59 1.59h2.83l.17-.17a4 4 0 0 0-5.66-5.66l-3.18 3.18a4 4 0 0 0 5.66 5.66l.88-.88H12.88l-.29.29a1.996 1.996 0 0 1-2.82 0zM13.41 10.59a1.996 1.996 0 0 1 0 2.82l-3.18 3.18a2 2 0 1 1-2.83-2.83l1.59-1.59H6.17L6 12.34A4 4 0 0 0 11.66 18l3.18-3.18a4 4 0 0 0-5.66-5.66l-.88.88h2.83l.28-.29a1.996 1.996 0 0 1 2.82 0z"/></svg>
     </div>
 
-    <!-- New Options Row -->
-    <div class="controls-row">
-        <select id="exportFormat" class="format-select">
-            <option value="gpx">GPX (Garmin/Wahoo)</option>
-            <option value="kml">KML (Google Maps)</option>
-        </select>
-        <label class="checkbox-label">
-            <input type="checkbox" id="reverseRoute">
-            Route umkehren (Start ⮂ Ziel)
-        </label>
+    <div class="tool-row">
+        <div class="tool-card">
+            <label class="tool-label" for="exportFormat">Download-Format</label>
+            <select id="exportFormat">
+                <option value="gpx">GPX (Garmin / Wahoo)</option>
+                <option value="kml">KML (Google Earth / Maps)</option>
+                <option value="csv">CSV (eigene Tools / Tabellen)</option>
+            </select>
+        </div>
+        <div class="tool-card">
+            <label class="tool-label" for="arrowSpacingKm">Richtungspfeile</label>
+            <select id="arrowSpacingKm">
+                <option value="1">alle 1 km</option>
+                <option value="2" selected>alle 2 km</option>
+                <option value="3">alle 3 km</option>
+                <option value="5">alle 5 km</option>
+            </select>
+        </div>
     </div>
 
-    <button type="button" id="downloadBtn" class="main-btn">
-        <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
-        Preview & Download
+    <button type="button" id="compileBtn" class="main-btn">
+        <svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v3h2V5h14v14H5v-3H3v3c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM11 16l5-4-5-4v3H3v2h8v3z"/></svg>
+        Compile & Preview
     </button>
-    
+
+    <div id="map-wrap">
+        <div class="map-badge">
+            <div><span class="dot" style="background:#2ecc71;"></span>Start</div>
+            <div><span class="dot" style="background:#e74c3c;"></span>Ziel</div>
+            <div><span class="dot" style="background:#e67e22;"></span>POIs</div>
+            <div><span class="arrow-mini"></span>Richtung</div>
+        </div>
+        <div id="map-container"></div>
+    </div>
+
+    <div id="previewNote" class="preview-note"></div>
+
+    <div id="downloadPanel" class="download-panel">
+        <button type="button" id="togglePreviewBtn" class="ghost-btn">
+            <svg viewBox="0 0 24 24"><path d="M7.41 7.84 12 3.25l4.59 4.59L15.17 9.25 13 7.08V16h-2V7.08L8.83 9.25 7.41 7.84zm9.18 8.32L12 20.75l-4.59-4.59 1.42-1.41L11 16.92V8h2v8.92l2.17-2.17 1.42 1.41z"/></svg>
+            Vorschau umkehren
+        </button>
+
+        <button type="button" id="downloadNormalBtn" class="download-btn">
+            <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+            Download normale Route
+        </button>
+
+        <button type="button" id="downloadReverseBtn" class="download-btn reverse">
+            <svg viewBox="0 0 24 24"><path d="M4 12l7-7v4h5a4 4 0 0 1 0 8h-1v-2h1a2 2 0 0 0 0-4h-5v4l-7-7z"/></svg>
+            Download Reverse Route
+        </button>
+    </div>
+
     <div id="debug-console">
         <div class="log-system">user@komoot-exporter:~$ init engine</div>
-        <div class="log-info">> System ready. Share API active.</div>
+        <div class="log-info">&gt; System ready. Share API active.</div>
     </div>
+
     <div class="log-links">
         <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank" rel="noopener noreferrer">Github Project</a>
         <a href="https://github.com/basecore/Komoot-2-GPX/issues" target="_blank" rel="noopener noreferrer">Issues</a>
     </div>
-    
-    <div id="map-container"></div>
 </div>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
@@ -143,6 +564,22 @@
     var map = null;
     var trackLayer = null;
     var poiLayerGroup = null;
+    var arrowLayerGroup = null;
+
+    var appState = {
+        compiled: false,
+        previewReversed: false,
+        tourName: "",
+        track: [],
+        pois: [],
+        tourData: {},
+        distance: 0,
+        descriptionSource: "Keine",
+        poiSource: "Keine",
+        currentUrl: "",
+        isSmartTour: false,
+        currentTourId: ""
+    };
 
     let deferredPrompt;
     const installBtn = document.getElementById('installAppBtn');
@@ -154,9 +591,9 @@
     });
 
     installBtn.addEventListener('click', async function() {
-        if (deferredPrompt !== null) {
+        if (deferredPrompt) {
             deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
+            await deferredPrompt.userChoice;
             deferredPrompt = null;
             installBtn.style.display = 'none';
         }
@@ -171,13 +608,107 @@
         var consoleDiv = document.getElementById('debug-console');
         if (!consoleDiv) return;
         var time = new Date().toTimeString().split(' ')[0];
-        
         var isBlock = (type === 'success' || type === 'file');
         var wrapStart = isBlock ? '<div style="width:100%">' : '';
         var wrapEnd = isBlock ? '</div>' : '';
-        
         consoleDiv.innerHTML += wrapStart + '<div class="log-' + type + '"><span style="opacity:0.5">[' + time + ']</span> ' + message + '</div>' + wrapEnd;
         consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+    function escapeXml(unsafe) {
+        return (unsafe || "").toString().replace(/[<>&'"]/g, function(c) {
+            switch (c) {
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '&': return '&amp;';
+                case '\'': return '&apos;';
+                case '"': return '&quot;';
+            }
+        });
+    }
+
+    function escapeHtml(unsafe) {
+        return (unsafe || "").toString().replace(/[&<>"']/g, function(m) {
+            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'})[m];
+        });
+    }
+
+    function fileSafeName(name) {
+        return (name || "komoot_route").replace(/[^a-z0-9äöüß]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase();
+    }
+
+    function cloneTrack(items) {
+        var out = [];
+        for (var i = 0; i < items.length; i++) {
+            out.push({
+                lat: items[i].lat,
+                lng: items[i].lng,
+                alt: items[i].alt,
+                t: items[i].t
+            });
+        }
+        return out;
+    }
+
+    function reverseTrackKeepingTime(items) {
+        var cloned = cloneTrack(items);
+        var originalTimes = cloned.map(function(p) { return p.t; });
+        cloned.reverse();
+        for (var i = 0; i < cloned.length; i++) {
+            cloned[i].t = originalTimes[i] || null;
+        }
+        return cloned;
+    }
+
+    function dedupePois(items) {
+        var seen = {};
+        var out = [];
+        for (var i = 0; i < items.length; i++) {
+            var p = items[i];
+            var key = [Number(p.lat).toFixed(6), Number(p.lng).toFixed(6), (p.name || '').trim()].join('|');
+            if (!seen[key]) {
+                seen[key] = true;
+                out.push(p);
+            }
+        }
+        return out;
+    }
+
+    function haversineMeters(aLat, aLng, bLat, bLng) {
+        var R = 6371000;
+        var dLat = (bLat - aLat) * Math.PI / 180;
+        var dLng = (bLng - aLng) * Math.PI / 180;
+        var lat1 = aLat * Math.PI / 180;
+        var lat2 = bLat * Math.PI / 180;
+
+        var s1 = Math.sin(dLat / 2);
+        var s2 = Math.sin(dLng / 2);
+        var c = s1 * s1 + Math.cos(lat1) * Math.cos(lat2) * s2 * s2;
+        var d = 2 * Math.atan2(Math.sqrt(c), Math.sqrt(1 - c));
+        return R * d;
+    }
+
+    function bearingDegrees(aLat, aLng, bLat, bLng) {
+        var lat1 = aLat * Math.PI / 180;
+        var lat2 = bLat * Math.PI / 180;
+        var dLng = (bLng - aLng) * Math.PI / 180;
+
+        var y = Math.sin(dLng) * Math.cos(lat2);
+        var x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(dLng);
+        var brng = Math.atan2(y, x) * 180 / Math.PI;
+        return (brng + 360) % 360;
+    }
+
+    function isValidCoord(lat, lng) {
+        return typeof lat === 'number' && typeof lng === 'number' && !isNaN(lat) && !isNaN(lng);
+    }
+
+    function getDistanceString(distanceMeters) {
+        return distanceMeters ? (distanceMeters / 1000).toFixed(2) + " km" : "Unknown length";
+    }
+
+    function getDesiredDescription(tourData) {
+        return (tourData && (tourData.description || (tourData.tour_information && tourData.tour_information.description) || "")) || "";
     }
 
     var PROXY_LIST = [
@@ -197,19 +728,23 @@
             var proxy = PROXY_LIST[i];
             var proxyUrl = proxy.url(targetUrl);
             logMsg('> Trying ' + proxy.name + '...', "info");
-            
+
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(function() { controller.abort(); }, 12000); 
+                const timeoutId = setTimeout(function() { controller.abort(); }, 12000);
 
                 var reqHeaders = { 'Accept': 'application/hal+json, application/json, */*' };
                 if (proxy.name === 'cors.sh') reqHeaders['x-cors-api-key'] = 'temp_81f0b093380c2f8f8ed97405d4142f74';
 
-                var response = await fetch(proxyUrl, { headers: reqHeaders, cache: 'no-store', signal: controller.signal });
-                clearTimeout(timeoutId);
+                var response = await fetch(proxyUrl, {
+                    headers: reqHeaders,
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
 
+                clearTimeout(timeoutId);
                 if (!response.ok) throw new Error('HTTP ' + response.status);
-                
+
                 var data;
                 if (proxy.type === "wrapper") {
                     var wrapper = await response.json();
@@ -220,116 +755,360 @@
                     if (text.trim().startsWith('<')) throw new Error("Blocked (Returned HTML)");
                     data = JSON.parse(text);
                 }
-                
+
                 logMsg('⭐ SUCCESS! ' + contextName + ' loaded via ' + proxy.name + ' ⭐', "success");
                 return data;
-
             } catch (err) {
                 var errMsg = err.name === 'AbortError' ? "Timeout (>12s)" : err.message;
                 logMsg('× ' + proxy.name + ' failed: ' + errMsg, "warning");
                 lastError = errMsg;
             }
         }
+
         throw new Error('All routes dead. Last error: ' + lastError);
+    }
+
+    async function fetchTextWithFallbacks(targetUrl, contextName) {
+        logMsg('Fetching ' + contextName + '...', "system");
+        var lastError = "";
+
+        for (var i = 0; i < PROXY_LIST.length; i++) {
+            var proxy = PROXY_LIST[i];
+            var proxyUrl = proxy.url(targetUrl);
+            logMsg('> Trying ' + proxy.name + '...', "info");
+
+            try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(function() { controller.abort(); }, 12000);
+
+                var reqHeaders = { 'Accept': 'text/html,application/xhtml+xml,text/plain,*/*' };
+                if (proxy.name === 'cors.sh') reqHeaders['x-cors-api-key'] = 'temp_81f0b093380c2f8f8ed97405d4142f74';
+
+                var response = await fetch(proxyUrl, {
+                    headers: reqHeaders,
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+
+                var text;
+                if (proxy.type === "wrapper") {
+                    var wrapper = await response.json();
+                    if (!wrapper.contents) throw new Error("Empty wrapper contents");
+                    text = wrapper.contents;
+                } else {
+                    text = await response.text();
+                }
+
+                if (!text || text.length < 1000) throw new Error("HTML too short / blocked");
+                logMsg('⭐ SUCCESS! ' + contextName + ' loaded via ' + proxy.name + ' ⭐', "success");
+                return text;
+            } catch (err) {
+                var errMsg = err.name === 'AbortError' ? "Timeout (>12s)" : err.message;
+                logMsg('× ' + proxy.name + ' failed: ' + errMsg, "warning");
+                lastError = errMsg;
+            }
+        }
+
+        throw new Error('All routes dead. Last error: ' + lastError);
+    }
+
+    function decodeKomootPropsString(str) {
+        return str
+            .replace(/\\\\/g, '\\u005c')
+            .replace(/\\"/g, '"')
+            .replace(/\\n/g, '\n')
+            .replace(/\\r/g, '')
+            .replace(/\\t/g, '\t')
+            .replace(/\\u003c/g, '<')
+            .replace(/\\u003e/g, '>')
+            .replace(/\\u0026/g, '&')
+            .replace(/&amp;lt;/g, '<')
+            .replace(/&amp;gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/&#39;/g, "'")
+            .replace(/\\u005c/g, '\\');
+    }
+
+    function extractLatLngFromCandidate(candidate, fallbackItem) {
+        if (candidate && candidate.location && isValidCoord(candidate.location.lat, candidate.location.lng)) {
+            return { lat: candidate.location.lat, lng: candidate.location.lng };
+        }
+        if (candidate && isValidCoord(candidate.lat, candidate.lng)) {
+            return { lat: candidate.lat, lng: candidate.lng };
+        }
+        if (fallbackItem && fallbackItem.location && isValidCoord(fallbackItem.location.lat, fallbackItem.location.lng)) {
+            return { lat: fallbackItem.location.lat, lng: fallbackItem.location.lng };
+        }
+        if (fallbackItem && isValidCoord(fallbackItem.lat, fallbackItem.lng)) {
+            return { lat: fallbackItem.lat, lng: fallbackItem.lng };
+        }
+        return null;
+    }
+
+    function parseKomootHtmlFallback(html) {
+        var result = {
+            description: "",
+            pois: [],
+            source: "Keine"
+        };
+
+        try {
+            var match = html.match(/kmtBoot\.setProps\("([\s\S]*?)"\);/);
+            if (match && match[1]) {
+                var raw = decodeKomootPropsString(match[1]);
+                var props = JSON.parse(raw);
+
+                var tour = props &&
+                           props.page &&
+                           props.page._embedded &&
+                           props.page._embedded.tour
+                           ? props.page._embedded.tour
+                           : null;
+
+                if (tour) {
+                    result.description =
+                        tour.description ||
+                        (tour.tour_information && tour.tour_information.description) ||
+                        "";
+
+                    var items = [];
+                    if (tour._embedded &&
+                        tour._embedded.elements &&
+                        tour._embedded.elements._embedded &&
+                        tour._embedded.elements._embedded.items) {
+                        items = tour._embedded.elements._embedded.items;
+                    }
+
+                    var extracted = [];
+
+                    for (var i = 0; i < items.length; i++) {
+                        var item = items[i] || {};
+                        var embedded = item._embedded || {};
+
+                        var candidates = [
+                            embedded.highlight,
+                            embedded.poi,
+                            embedded.reference,
+                            embedded.destination,
+                            embedded.place,
+                            embedded.item,
+                            item
+                        ];
+
+                        for (var j = 0; j < candidates.length; j++) {
+                            var candidate = candidates[j];
+                            if (!candidate) continue;
+
+                            var ll = extractLatLngFromCandidate(candidate, item);
+                            if (ll) {
+                                extracted.push({
+                                    lat: ll.lat,
+                                    lng: ll.lng,
+                                    name: candidate.name || candidate.title || item.name || item.title || "Highlight",
+                                    description: candidate.description || item.description || ""
+                                });
+                                break;
+                            }
+                        }
+                    }
+
+                    result.pois = dedupePois(extracted);
+                    result.source = "HTML kmtBoot";
+                }
+            }
+
+            if (!result.description) {
+                var metaMatch = html.match(/<meta\s+name="description"\s+content="([^"]+)"/i);
+                if (metaMatch && metaMatch[1]) {
+                    result.description = metaMatch[1];
+                    if (result.source === "Keine") result.source = "HTML meta";
+                }
+            }
+        } catch (e) {
+            logMsg("HTML fallback parse failed: " + e.message, "warning");
+        }
+
+        return result;
+    }
+
+    function buildPopupHtml(title, description) {
+        var html = '<div><strong>' + escapeHtml(title || 'Marker') + '</strong>';
+        if (description) {
+            html += '<div style="margin-top:6px;color:#c7cbd0;">' + escapeHtml(description) + '</div>';
+        }
+        html += '</div>';
+        return html;
+    }
+
+    function addDirectionArrows(coords) {
+        if (!arrowLayerGroup) arrowLayerGroup = L.layerGroup().addTo(map);
+        arrowLayerGroup.clearLayers();
+
+        if (!coords || coords.length < 2) return;
+
+        var stepMeters = parseInt(document.getElementById('arrowSpacingKm').value, 10) * 1000;
+        var acc = 0;
+        var nextArrowAt = stepMeters;
+
+        for (var i = 1; i < coords.length; i++) {
+            var prev = coords[i - 1];
+            var cur = coords[i];
+            var seg = haversineMeters(prev.lat, prev.lng, cur.lat, cur.lng);
+            acc += seg;
+
+            if (acc >= nextArrowAt) {
+                var angle = bearingDegrees(prev.lat, prev.lng, cur.lat, cur.lng);
+                var icon = L.divIcon({
+                    className: 'direction-arrow-wrap',
+                    html: '<div class="direction-arrow" style="transform: rotate(' + angle + 'deg);"></div>',
+                    iconSize: [16, 16],
+                    iconAnchor: [8, 8]
+                });
+
+                var marker = L.marker([cur.lat, cur.lng], {
+                    icon: icon,
+                    interactive: false,
+                    keyboard: false
+                });
+
+                arrowLayerGroup.addLayer(marker);
+                nextArrowAt += stepMeters;
+            }
+        }
     }
 
     function renderMap(coords, pois) {
         try {
-            var mapDiv = document.getElementById('map-container');
-            mapDiv.classList.add('visible');
-            
+            var mapWrap = document.getElementById('map-wrap');
+            mapWrap.classList.add('visible');
+
             if (!map) {
-                map = L.map('map-container');
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+                map = L.map('map-container', { zoomControl: true });
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; OpenStreetMap'
+                }).addTo(map);
             }
-            
+
             if (trackLayer) map.removeLayer(trackLayer);
             if (poiLayerGroup) map.removeLayer(poiLayerGroup);
-            
+            if (arrowLayerGroup) map.removeLayer(arrowLayerGroup);
+
             poiLayerGroup = L.layerGroup().addTo(map);
+            arrowLayerGroup = L.layerGroup().addTo(map);
 
             var latLngs = [];
-            for (var i = 0; i < coords.length; i++) latLngs.push([coords[i].lat, coords[i].lng]);
+            for (var i = 0; i < coords.length; i++) {
+                latLngs.push([coords[i].lat, coords[i].lng]);
+            }
 
-            trackLayer = L.polyline(latLngs, { color: '#97b536', weight: 4, lineCap: 'round', lineJoin: 'round' }).addTo(map);
-            map.fitBounds(trackLayer.getBounds());
-            
-            // Render POIs
+            trackLayer = L.polyline(latLngs, {
+                color: '#97b536',
+                weight: 4,
+                lineCap: 'round',
+                lineJoin: 'round'
+            }).addTo(map);
+
             if (pois && pois.length > 0) {
                 for (var j = 0; j < pois.length; j++) {
                     var poi = pois[j];
-                    var poiLat = poi.location ? poi.location.lat : poi.lat;
-                    var poiLng = poi.location ? poi.location.lng : poi.lng;
+                    var poiLat = (poi.location && poi.location.lat !== undefined) ? poi.location.lat : poi.lat;
+                    var poiLng = (poi.location && poi.location.lng !== undefined) ? poi.location.lng : poi.lng;
                     var poiName = poi.name || poi.title || "Highlight";
-                    
-                    if (poiLat && poiLng) {
-                        var marker = L.circleMarker([poiLat, poiLng], {
-                            radius: 5, fillColor: "#e67e22", color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
+                    var poiDesc = poi.description || "";
+
+                    if (isValidCoord(poiLat, poiLng)) {
+                        var poiMarker = L.circleMarker([poiLat, poiLng], {
+                            radius: 5,
+                            fillColor: "#e67e22",
+                            color: "#fff",
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 1
                         });
-                        marker.bindPopup("<b>🟠 " + poiName + "</b>");
-                        marker.on('mouseover', function(e) { this.openPopup(); });
-                        poiLayerGroup.addLayer(marker);
+
+                        poiMarker.bindPopup(buildPopupHtml("🟠 " + poiName, poiDesc));
+                        poiMarker.on('mouseover', function() { this.openPopup(); });
+                        poiLayerGroup.addLayer(poiMarker);
                     }
                 }
             }
 
-            // Start & Ziel Marker (mit Loop-Erkennung)
             if (coords && coords.length > 0) {
                 var startPt = coords[0];
                 var endPt = coords[coords.length - 1];
-                
-                // Prüfen ob Rundtour (Start und Ziel liegen übereinander)
                 var dLat = Math.abs(startPt.lat - endPt.lat);
                 var dLng = Math.abs(startPt.lng - endPt.lng);
                 var isLoop = (dLat < 0.0002 && dLng < 0.0002);
 
                 if (isLoop) {
-                    // Bullseye: Startkreis groß (Grün), Zielkreis klein (Rot) im Zentrum
-                    var startMarker = L.circleMarker([startPt.lat, startPt.lng], {
-                        radius: 11, fillColor: "#2ecc71", color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
+                    var loopStart = L.circleMarker([startPt.lat, startPt.lng], {
+                        radius: 11,
+                        fillColor: "#2ecc71",
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 1
                     });
-                    startMarker.bindPopup("<b>🟢 Start & 🔴 Ziel (Rundtour)</b>");
-                    startMarker.on('mouseover', function(e) { this.openPopup(); });
-                    poiLayerGroup.addLayer(startMarker);
 
-                    var endMarker = L.circleMarker([endPt.lat, endPt.lng], {
-                        radius: 5, fillColor: "#e74c3c", color: "#fff", weight: 1, opacity: 1, fillOpacity: 1
+                    loopStart.bindPopup(buildPopupHtml("🟢 Start & 🔴 Ziel", "Rundtour: Anfang und Ende liegen sehr nah beieinander."));
+                    loopStart.on('mouseover', function() { this.openPopup(); });
+                    poiLayerGroup.addLayer(loopStart);
+
+                    var loopEnd = L.circleMarker([endPt.lat, endPt.lng], {
+                        radius: 5,
+                        fillColor: "#e74c3c",
+                        color: "#fff",
+                        weight: 1,
+                        opacity: 1,
+                        fillOpacity: 1
                     });
-                    endMarker.bindPopup("<b>🔴 Ziel</b>");
-                    endMarker.on('mouseover', function(e) { this.openPopup(); });
-                    poiLayerGroup.addLayer(endMarker);
+
+                    loopEnd.bindPopup(buildPopupHtml("🔴 Ziel", ""));
+                    loopEnd.on('mouseover', function() { this.openPopup(); });
+                    poiLayerGroup.addLayer(loopEnd);
                 } else {
-                    // Normale Anzeige
                     var startMarker = L.circleMarker([startPt.lat, startPt.lng], {
-                        radius: 8, fillColor: "#2ecc71", color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
+                        radius: 8,
+                        fillColor: "#2ecc71",
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 1
                     });
-                    startMarker.bindPopup("<b>🟢 Start</b>");
-                    startMarker.on('mouseover', function(e) { this.openPopup(); });
+
+                    startMarker.bindPopup(buildPopupHtml("🟢 Start", ""));
+                    startMarker.on('mouseover', function() { this.openPopup(); });
                     poiLayerGroup.addLayer(startMarker);
 
                     var endMarker = L.circleMarker([endPt.lat, endPt.lng], {
-                        radius: 8, fillColor: "#e74c3c", color: "#fff", weight: 2, opacity: 1, fillOpacity: 1
+                        radius: 8,
+                        fillColor: "#e74c3c",
+                        color: "#fff",
+                        weight: 2,
+                        opacity: 1,
+                        fillOpacity: 1
                     });
-                    endMarker.bindPopup("<b>🔴 Ziel</b>");
-                    endMarker.on('mouseover', function(e) { this.openPopup(); });
+
+                    endMarker.bindPopup(buildPopupHtml("🔴 Ziel", ""));
+                    endMarker.on('mouseover', function() { this.openPopup(); });
                     poiLayerGroup.addLayer(endMarker);
                 }
             }
 
-            setTimeout(function() { map.invalidateSize(); }, 300);
+            addDirectionArrows(coords);
+            map.fitBounds(trackLayer.getBounds(), { padding: [20, 20] });
+
+            setTimeout(function() { map.invalidateSize(); }, 200);
             logMsg("Map rendering complete", "info");
-        } catch(e) {
+        } catch (e) {
             logMsg('Map Error: ' + e.message, "error");
         }
     }
 
-    function escapeXml(unsafe) {
-        return (unsafe || "").toString().replace(/[<>&'"]/g, function (c) {
-            switch (c) { case '<': return '&lt;'; case '>': return '&gt;'; case '&': return '&amp;'; case '\'': return '&apos;'; case '"': return '&quot;'; }
-        });
-    }
-
-    function executeDownload(content, filename, mimeType, hasDesc, poiCount, formatName) {
+    function executeDownload(content, filename, mimeType, meta) {
         try {
             var blob = new Blob([content], { type: mimeType });
             var link = document.createElement("a");
@@ -338,45 +1117,47 @@
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            
+
             logMsg("Download completed successfully!", "success");
             logMsg("File saved to folder: Downloads/" + filename, "file");
-            logMsg("--- Integrierte Metadaten in " + formatName + " ---", "info");
-            logMsg("↳ Tour-Beschreibung: " + (hasDesc ? "Ja" : "Nein"), "meta");
-            logMsg("↳ POIs / Highlights: " + (poiCount > 0 ? poiCount + " Stück" : "Keine"), "meta");
-        } catch(e) {
+            logMsg("--- Integrierte Metadaten ---", "info");
+            logMsg("↳ Tour-Beschreibung: " + (meta.hasDescription ? "Ja" : "Nein"), "meta");
+            logMsg("↳ Quelle Beschreibung: " + (meta.descriptionSource || "Keine"), "meta");
+            logMsg("↳ POIs / Highlights: " + (meta.poiCount > 0 ? meta.poiCount + " Stück" : "Keine"), "meta");
+            logMsg("↳ Quelle POIs: " + (meta.poiSource || "Keine"), "meta");
+        } catch (e) {
             logMsg('Download Error: ' + e.message, "error");
         }
     }
 
-    function generateGPX(name, items, pois, tourData) {
+    function generateGPX(name, items, pois, tourData, meta) {
         logMsg('Compiling GPX...', "system");
+
         var safeName = escapeXml(name);
-        var filename = name.replace(/[^a-z0-9äöüß]/gi, '_').toLowerCase() + '.gpx';
+        var filename = fileSafeName(name) + '.gpx';
+        var description = getDesiredDescription(tourData);
+
         var lines = [];
-        
         lines.push('<?xml version="1.0" encoding="UTF-8"?>');
         lines.push('<gpx version="1.1" creator="Komoot2GPX" xmlns="http://www.topografix.com/GPX/1/1">');
         lines.push('  <metadata>');
         lines.push('    <name>' + safeName + '</name>');
-        
-        var hasDescription = false;
-        if (tourData && tourData.description) {
-            lines.push('    <desc>' + escapeXml(tourData.description) + '</desc>');
-            hasDescription = true;
-        }
+        if (description) lines.push('    <desc>' + escapeXml(description) + '</desc>');
         lines.push('  </metadata>');
 
         var poiCount = 0;
         if (pois && pois.length > 0) {
             for (var j = 0; j < pois.length; j++) {
                 var poi = pois[j];
-                var poiLat = poi.location ? poi.location.lat : poi.lat;
-                var poiLng = poi.location ? poi.location.lng : poi.lng;
-                if (poiLat && poiLng) {
+                var poiLat = (poi.location && poi.location.lat !== undefined) ? poi.location.lat : poi.lat;
+                var poiLng = (poi.location && poi.location.lng !== undefined) ? poi.location.lng : poi.lng;
+                var poiName = poi.name || poi.title || "Highlight";
+                var poiDesc = poi.description || "";
+
+                if (isValidCoord(poiLat, poiLng)) {
                     lines.push('  <wpt lat="' + poiLat + '" lon="' + poiLng + '">');
-                    lines.push('    <name>' + escapeXml(poi.name || poi.title || "Highlight") + '</name>');
-                    if (poi.description) lines.push('    <desc>' + escapeXml(poi.description) + '</desc>');
+                    lines.push('    <name>' + escapeXml(poiName) + '</name>');
+                    if (poiDesc) lines.push('    <desc>' + escapeXml(poiDesc) + '</desc>');
                     lines.push('    <sym>Generic</sym>');
                     lines.push('  </wpt>');
                     poiCount++;
@@ -384,7 +1165,10 @@
             }
         }
 
-        lines.push('  <trk><name>' + safeName + '</name><trkseg>');
+        lines.push('  <trk>');
+        lines.push('    <name>' + safeName + '</name>');
+        lines.push('    <trkseg>');
+
         for (var i = 0; i < items.length; i++) {
             var pt = items[i];
             lines.push('      <trkpt lat="' + pt.lat + '" lon="' + pt.lng + '">');
@@ -392,39 +1176,50 @@
             if (pt.t) lines.push('        <time>' + new Date(pt.t).toISOString() + '</time>');
             lines.push('      </trkpt>');
         }
-        lines.push('    </trkseg></trk></gpx>');
-        
-        executeDownload(lines.join('\n'), filename, 'application/gpx+xml', hasDescription, poiCount, 'GPX');
+
+        lines.push('    </trkseg>');
+        lines.push('  </trk>');
+        lines.push('</gpx>');
+
+        executeDownload(lines.join('\n'), filename, 'application/gpx+xml', {
+            hasDescription: !!description,
+            descriptionSource: meta.descriptionSource,
+            poiCount: poiCount,
+            poiSource: meta.poiSource
+        });
     }
 
-    function generateKML(name, items, pois, tourData) {
-        logMsg('Compiling KML for Google Maps...', "system");
+    function generateKML(name, items, pois, tourData, meta) {
+        logMsg('Compiling KML...', "system");
+
         var safeName = escapeXml(name);
-        var filename = name.replace(/[^a-z0-9äöüß]/gi, '_').toLowerCase() + '.kml';
+        var filename = fileSafeName(name) + '.kml';
+        var description = getDesiredDescription(tourData);
+
         var lines = [];
-        
         lines.push('<?xml version="1.0" encoding="UTF-8"?>');
         lines.push('<kml xmlns="http://www.opengis.net/kml/2.2">');
         lines.push('  <Document>');
         lines.push('    <name>' + safeName + '</name>');
-        
-        var hasDescription = false;
-        if (tourData && tourData.description) {
-            lines.push('    <description>' + escapeXml(tourData.description) + '</description>');
-            hasDescription = true;
-        }
-        lines.push('    <Style id="track"><LineStyle><color>ff36b597</color><width>5</width></LineStyle></Style>');
+        if (description) lines.push('    <description>' + escapeXml(description) + '</description>');
+
+        lines.push('    <Style id="trackStyle"><LineStyle><color>ff36b597</color><width>5</width></LineStyle></Style>');
+        lines.push('    <Style id="poiStyle"><IconStyle><scale>1.1</scale></IconStyle></Style>');
 
         var poiCount = 0;
         if (pois && pois.length > 0) {
             for (var j = 0; j < pois.length; j++) {
                 var poi = pois[j];
-                var poiLat = poi.location ? poi.location.lat : poi.lat;
-                var poiLng = poi.location ? poi.location.lng : poi.lng;
-                if (poiLat && poiLng) {
+                var poiLat = (poi.location && poi.location.lat !== undefined) ? poi.location.lat : poi.lat;
+                var poiLng = (poi.location && poi.location.lng !== undefined) ? poi.location.lng : poi.lng;
+                var poiName = poi.name || poi.title || "Highlight";
+                var poiDesc = poi.description || "";
+
+                if (isValidCoord(poiLat, poiLng)) {
                     lines.push('    <Placemark>');
-                    lines.push('      <name>' + escapeXml(poi.name || poi.title || "Highlight") + '</name>');
-                    if (poi.description) lines.push('      <description>' + escapeXml(poi.description) + '</description>');
+                    lines.push('      <name>' + escapeXml(poiName) + '</name>');
+                    if (poiDesc) lines.push('      <description>' + escapeXml(poiDesc) + '</description>');
+                    lines.push('      <styleUrl>#poiStyle</styleUrl>');
                     lines.push('      <Point><coordinates>' + poiLng + ',' + poiLat + ',0</coordinates></Point>');
                     lines.push('    </Placemark>');
                     poiCount++;
@@ -433,177 +1228,374 @@
         }
 
         lines.push('    <Placemark>');
-        lines.push('      <name>Route Track</name>');
-        lines.push('      <styleUrl>#track</styleUrl>');
-        lines.push('      <LineString><tessellate>1</tessellate><coordinates>');
-        
-        var coordList = [];
+        lines.push('      <name>' + safeName + '</name>');
+        lines.push('      <styleUrl>#trackStyle</styleUrl>');
+        lines.push('      <LineString>');
+        lines.push('        <tessellate>1</tessellate>');
+        lines.push('        <coordinates>');
         for (var i = 0; i < items.length; i++) {
-            var ele = items[i].alt !== undefined ? items[i].alt : 0;
-            coordList.push(items[i].lng + ',' + items[i].lat + ',' + ele);
+            var ele = (items[i].alt !== undefined) ? items[i].alt : 0;
+            lines.push('          ' + items[i].lng + ',' + items[i].lat + ',' + ele);
         }
-        lines.push(coordList.join(' '));
-        
-        lines.push('      </coordinates></LineString>');
+        lines.push('        </coordinates>');
+        lines.push('      </LineString>');
         lines.push('    </Placemark>');
         lines.push('  </Document>');
         lines.push('</kml>');
-        
-        executeDownload(lines.join('\n'), filename, 'application/vnd.google-earth.kml+xml', hasDescription, poiCount, 'KML');
+
+        executeDownload(lines.join('\n'), filename, 'application/vnd.google-earth.kml+xml', {
+            hasDescription: !!description,
+            descriptionSource: meta.descriptionSource,
+            poiCount: poiCount,
+            poiSource: meta.poiSource
+        });
     }
 
-    async function startExport() {
+    function generateCSV(name, items, pois, tourData, meta) {
+        logMsg('Compiling CSV...', "system");
+
+        var filename = fileSafeName(name) + '.csv';
+        var rows = [];
+        rows.push(['type','name','description','lat','lng','ele','time'].join(','));
+
+        for (var i = 0; i < items.length; i++) {
+            var pt = items[i];
+            rows.push([
+                'trackpoint',
+                '"' + (name || '').replace(/"/g, '""') + '"',
+                '""',
+                pt.lat,
+                pt.lng,
+                pt.alt !== undefined ? pt.alt : '',
+                pt.t ? '"' + new Date(pt.t).toISOString() + '"' : ''
+            ].join(','));
+        }
+
+        var poiCount = 0;
+        for (var j = 0; j < (pois || []).length; j++) {
+            var poi = pois[j];
+            var poiLat = (poi.location && poi.location.lat !== undefined) ? poi.location.lat : poi.lat;
+            var poiLng = (poi.location && poi.location.lng !== undefined) ? poi.location.lng : poi.lng;
+            if (isValidCoord(poiLat, poiLng)) {
+                rows.push([
+                    'poi',
+                    '"' + String(poi.name || poi.title || 'Highlight').replace(/"/g, '""') + '"',
+                    '"' + String(poi.description || '').replace(/"/g, '""') + '"',
+                    poiLat,
+                    poiLng,
+                    '',
+                    ''
+                ].join(','));
+                poiCount++;
+            }
+        }
+
+        executeDownload(rows.join('\n'), filename, 'text/csv;charset=utf-8', {
+            hasDescription: !!getDesiredDescription(tourData),
+            descriptionSource: meta.descriptionSource,
+            poiCount: poiCount,
+            poiSource: meta.poiSource
+        });
+    }
+
+    function updatePreviewNote() {
+        var note = document.getElementById('previewNote');
+        var routeState = appState.previewReversed
+            ? '<span class="status-pill reverse">Preview: Reverse</span>'
+            : '<span class="status-pill">Preview: Normal</span>';
+
+        var txt = routeState +
+            '<div style="margin-top:10px;">Compile ist abgeschlossen. Du kannst jetzt die Kartenrichtung prüfen, die Vorschau umkehren und danach normal oder als <strong>Reverse</strong> herunterladen.</div>';
+
+        note.innerHTML = txt;
+        note.classList.add('visible');
+    }
+
+    function updatePreviewRender() {
+        if (!appState.compiled) return;
+
+        var renderTrack = appState.previewReversed
+            ? reverseTrackKeepingTime(appState.track)
+            : cloneTrack(appState.track);
+
+        renderMap(renderTrack, appState.pois);
+        updatePreviewNote();
+
+        var btn = document.getElementById('togglePreviewBtn');
+        btn.innerHTML = appState.previewReversed
+            ? '<svg viewBox="0 0 24 24"><path d="M7.41 7.84 12 3.25l4.59 4.59L15.17 9.25 13 7.08V16h-2V7.08L8.83 9.25 7.41 7.84zm9.18 8.32L12 20.75l-4.59-4.59 1.42-1.41L11 16.92V8h2v8.92l2.17-2.17 1.42 1.41z"/></svg> Vorschau zurück auf normal'
+            : '<svg viewBox="0 0 24 24"><path d="M7.41 7.84 12 3.25l4.59 4.59L15.17 9.25 13 7.08V16h-2V7.08L8.83 9.25 7.41 7.84zm9.18 8.32L12 20.75l-4.59-4.59 1.42-1.41L11 16.92V8h2v8.92l2.17-2.17 1.42 1.41z"/></svg> Vorschau umkehren';
+    }
+
+    function doDownload(reverse) {
+        if (!appState.compiled) {
+            logMsg("Nothing compiled yet. Please run preview first.", "warning");
+            return;
+        }
+
+        var format = document.getElementById('exportFormat').value;
+        var track = reverse ? reverseTrackKeepingTime(appState.track) : cloneTrack(appState.track);
+        var suffix = reverse ? ' Reverse' : '';
+        var exportName = appState.tourName + suffix;
+
+        if (reverse) {
+            logMsg("Preparing reversed export...", "meta");
+        } else {
+            logMsg("Preparing normal export...", "meta");
+        }
+
+        var meta = {
+            descriptionSource: appState.descriptionSource,
+            poiSource: appState.poiSource
+        };
+
+        if (format === 'kml') {
+            generateKML(exportName, track, appState.pois, appState.tourData, meta);
+        } else if (format === 'csv') {
+            generateCSV(exportName, track, appState.pois, appState.tourData, meta);
+        } else {
+            generateGPX(exportName, track, appState.pois, appState.tourData, meta);
+        }
+    }
+
+    function getTourUrlInfo(rawUrl) {
+        var url = rawUrl.trim();
+        var out = { id: "", isSmartTour: false };
+
+        if (url.indexOf("/smarttour/") > -1) {
+            out.isSmartTour = true;
+            out.id = url.split("/smarttour/")[1].split("?")[0].split("/")[0].split("#")[0];
+        } else if (url.indexOf("/tour/") > -1) {
+            out.isSmartTour = false;
+            out.id = url.split("/tour/")[1].split("?")[0].split("/")[0].split("#")[0];
+        }
+
+        return out;
+    }
+
+    async function compilePreview() {
         var urlInput = document.getElementById('tourUrl').value.trim();
-        var btn = document.getElementById('downloadBtn');
+        var btn = document.getElementById('compileBtn');
         var consoleDiv = document.getElementById('debug-console');
-        var mapDiv = document.getElementById('map-container');
-        var formatSelect = document.getElementById('exportFormat').value;
-        var reverseRoute = document.getElementById('reverseRoute').checked;
+        var downloadPanel = document.getElementById('downloadPanel');
+        var mapWrap = document.getElementById('map-wrap');
+        var previewNote = document.getElementById('previewNote');
 
-        consoleDiv.innerHTML = '<div class="log-system">user@komoot-exporter:~$ start --url --format=' + formatSelect + '</div>';
-        mapDiv.classList.remove('visible');
+        consoleDiv.innerHTML = '<div class="log-system">user@komoot-exporter:~$ compile --preview</div>';
+        mapWrap.classList.remove('visible');
+        downloadPanel.classList.remove('visible');
+        previewNote.classList.remove('visible');
 
-        if (!urlInput) { logMsg("Error: Please provide a URL", "error"); return; }
+        appState.compiled = false;
+        appState.previewReversed = false;
+
+        if (!urlInput) {
+            logMsg("Error: Please provide a URL", "error");
+            return;
+        }
 
         btn.disabled = true;
-        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Processing...';
+        btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6 0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6 0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4-4-4v3z"/></svg> Compiling...';
 
         try {
-            var tourId = ""; var isSmartTour = false;
+            var info = getTourUrlInfo(urlInput);
+            var tourId = info.id;
+            var isSmartTour = info.isSmartTour;
 
-            if (urlInput.indexOf("/smarttour/") > -1) {
-                isSmartTour = true;
-                tourId = urlInput.split("/smarttour/")[1].split("?")[0].split("/")[0].split("#")[0];
-            } else if (urlInput.indexOf("/tour/") > -1) {
-                isSmartTour = false;
-                tourId = urlInput.split("/tour/")[1].split("?")[0].split("/")[0].split("#")[0];
+            if (!tourId) throw new Error("Invalid URL format");
+
+            logMsg('Target: ID ' + tourId + ' (' + (isSmartTour ? 'Smart' : 'Standard') + ')', "info");
+
+            var numericTourId = isSmartTour ? tourId.replace(/\D/g, '') : tourId;
+            if (isSmartTour) {
+                logMsg("SmartTour: extracted numeric ID " + numericTourId, "info");
             }
 
-            if (tourId === "") throw new Error("Invalid URL format");
-            logMsg('Target: ID ' + tourId + ' (' + (isSmartTour ? 'Smart' : 'Standard') + ')', "info");
-            
-            var tourApiUrl = isSmartTour ? 'https://www.komoot.de/api/v007/discover_tours/' + tourId : 'https://www.komoot.de/api/v007/tours/' + tourId;
+            var tourApiUrl = isSmartTour
+                ? 'https://www.komoot.de/api/v007/discover_tours/' + tourId
+                : 'https://www.komoot.de/api/v007/tours/' + numericTourId;
 
             var tourData = await fetchWithFallbacks(tourApiUrl, "Metadata");
-            
+
             if (tourData.error) {
                 if (tourData.error === "AccessDenied" || tourData.error === "PrivateTour") {
-                     logMsg("NOTICE: This tour is PRIVATE.", "warning");
-                     throw new Error("Access Denied: This tour is set to PRIVATE.");
+                    throw new Error("Access Denied: This tour is set to PRIVATE.");
                 }
                 throw new Error("API Error: " + tourData.error);
             }
 
-            var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
-            var trueNumericTourId = isSmartTour ? tourId.replace(/\D/g,'') : tourId; 
-            
-            var coordsApiUrl = 'https://www.komoot.de/api/v007/tours/' + trueNumericTourId + '/coordinates';
+            var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + numericTourId;
+            var tourDistance = tourData.distance || 0;
+            var descriptionSource = (tourData.description || (tourData.tour_information && tourData.tour_information.description)) ? "API" : "Keine";
+
+            var coordsApiUrl = 'https://www.komoot.de/api/v007/tours/' + numericTourId + '/coordinates';
             var coordsData = null;
-            
+
             try {
                 coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates (Standard)");
             } catch (err) {
-                logMsg("Standard Coordinates API Failed. Checking SmartTour Fallback...", "warning");
+                logMsg("Standard Coordinates API failed. Checking SmartTour fallback...", "warning");
             }
-            
-            if (!coordsData || coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
-                if (isSmartTour) {
-                    logMsg("Attempting SmartTour Coordinates bypass...", "info");
-                    var smartCoordsApiUrl = 'https://www.komoot.de/api/v007/smart_tours/' + trueNumericTourId + '/coordinates';
-                    try { coordsData = await fetchWithFallbacks(smartCoordsApiUrl, "Coordinates (Smart Bypass)"); } catch(e) {}
-                }
+
+            if ((!coordsData || coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") && isSmartTour) {
+                var smartCoordsApiUrl = 'https://www.komoot.de/api/v007/smart_tours/' + numericTourId + '/coordinates';
+                logMsg("Attempting SmartTour coordinates bypass...", "info");
+                coordsData = await fetchWithFallbacks(smartCoordsApiUrl, "Coordinates (Smart Bypass)");
             }
 
             if (!coordsData || coordsData.error) {
-                var errorMsg = coordsData ? coordsData.error : "Unknown Error";
-                throw new Error("API Error: " + errorMsg);
+                var coordsErr = coordsData ? coordsData.error : "Unknown Error";
+                throw new Error("Coordinates Error: " + coordsErr);
             }
-            
-            var coordsDataItems = coordsData.items;
-            if (!coordsDataItems || coordsDataItems.length === 0) throw new Error("No GPS data found.");
 
-            // LOGIK: Route umkehren, falls gewünscht
-            if (reverseRoute) {
-                logMsg("Modifying Data: Reversing route direction...", "meta");
-                var originalTimes = coordsDataItems.map(function(p) { return p.t; });
-                coordsDataItems.reverse();
-                // Zeitstempel wiederherstellen, damit Zeit vorwärts läuft
-                for(var i=0; i<coordsDataItems.length; i++) {
-                    coordsDataItems[i].t = originalTimes[i];
-                }
+            if (!coordsData.items || coordsData.items.length === 0) {
+                throw new Error("No GPS data found.");
             }
 
             var poisData = [];
+            var poiSource = "Keine";
+
             try {
-                var poisApiUrl = 'https://www.komoot.de/api/v007/tours/' + trueNumericTourId + '/highlights';
+                var poisApiUrl = 'https://www.komoot.de/api/v007/tours/' + numericTourId + '/highlights';
                 var poisResponse = await fetchWithFallbacks(poisApiUrl, "POIs (Standard)");
-                
-                if (poisResponse && poisResponse.error === "AccessDenied" && isSmartTour) {
-                    poisApiUrl = 'https://www.komoot.de/api/v007/smart_tours/' + trueNumericTourId + '/highlights';
-                    poisResponse = await fetchWithFallbacks(poisApiUrl, "POIs (Smart Bypass)");
-                }
-                
+
                 if (poisResponse && poisResponse._embedded && poisResponse._embedded.items) {
                     poisData = poisResponse._embedded.items;
+                    poiSource = "API";
+                } else if (poisResponse && poisResponse.items) {
+                    poisData = poisResponse.items;
+                    poiSource = "API";
                 }
-            } catch(e) {
-                logMsg("No highlights found or skipped.", "info");
+            } catch (e) {
+                if (isSmartTour) {
+                    try {
+                        var smartPoisUrl = 'https://www.komoot.de/api/v007/smart_tours/' + numericTourId + '/highlights';
+                        var smartPoisResponse = await fetchWithFallbacks(smartPoisUrl, "POIs (Smart Bypass)");
+                        if (smartPoisResponse && smartPoisResponse._embedded && smartPoisResponse._embedded.items) {
+                            poisData = smartPoisResponse._embedded.items;
+                            poiSource = "API Smart";
+                        }
+                    } catch (e2) {}
+                }
             }
-            
-            logMsg('Stats: ' + coordsDataItems.length + ' pts', "info");
-            
-            renderMap(coordsDataItems, poisData);
-            
-            if (formatSelect === 'kml') {
-                generateKML(tourName + (reverseRoute ? " (Reversed)" : ""), coordsDataItems, poisData, tourData);
-            } else {
-                generateGPX(tourName + (reverseRoute ? " (Reversed)" : ""), coordsDataItems, poisData, tourData);
+
+            var needHtmlDescription = !getDesiredDescription(tourData);
+            var needHtmlPois = !poisData || poisData.length === 0;
+
+            if (needHtmlDescription || needHtmlPois) {
+                try {
+                    var publicTourUrl = isSmartTour
+                        ? 'https://www.komoot.de/smarttour/' + numericTourId
+                        : 'https://www.komoot.de/tour/' + numericTourId;
+
+                    var html = await fetchTextWithFallbacks(publicTourUrl, "Public Tour HTML");
+                    var fallbackData = parseKomootHtmlFallback(html);
+
+                    if (needHtmlDescription && fallbackData.description) {
+                        if (!tourData.tour_information) tourData.tour_information = {};
+                        tourData.tour_information.description = fallbackData.description;
+                        descriptionSource = fallbackData.source || "HTML";
+                        logMsg("↳ Tour-Beschreibung via HTML fallback gefunden", "meta");
+                    }
+
+                    if (needHtmlPois && fallbackData.pois && fallbackData.pois.length > 0) {
+                        poisData = fallbackData.pois;
+                        poiSource = fallbackData.source || "HTML";
+                        logMsg("↳ POIs / Highlights via HTML fallback gefunden: " + poisData.length, "meta");
+                    }
+                } catch (e) {
+                    logMsg("HTML fallback not available: " + e.message, "warning");
+                }
             }
-            
-            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Success!';
-            
+
+            poisData = dedupePois(poisData || []);
+
+            appState.compiled = true;
+            appState.previewReversed = false;
+            appState.tourName = tourName;
+            appState.track = cloneTrack(coordsData.items);
+            appState.pois = poisData;
+            appState.tourData = tourData;
+            appState.distance = tourDistance;
+            appState.descriptionSource = descriptionSource || "Keine";
+            appState.poiSource = poiSource || "Keine";
+            appState.currentUrl = urlInput;
+            appState.isSmartTour = isSmartTour;
+            appState.currentTourId = numericTourId;
+
+            logMsg('Compile success: ' + coordsData.items.length + ' pts | ' + getDistanceString(tourDistance), "success");
+            logMsg("Direction arrows active: every " + document.getElementById('arrowSpacingKm').value + " km", "meta");
+            logMsg("Description source: " + appState.descriptionSource, "meta");
+            logMsg("POI source: " + appState.poiSource, "meta");
+
+            updatePreviewRender();
+            downloadPanel.classList.add('visible');
+
+            btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Preview Ready';
         } catch (error) {
             logMsg('ABORT: ' + error.message, "error");
             btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg> Failed';
         } finally {
-            setTimeout(function() { 
-                btn.disabled = false; 
-                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg> Preview & Download';
-            }, 3000);
+            setTimeout(function() {
+                btn.disabled = false;
+                btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v3h2V5h14v14H5v-3H3v3c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zM11 16l5-4-5-4v3H3v2h8v3z"/></svg> Compile & Preview';
+            }, 2500);
         }
     }
 
     document.addEventListener('DOMContentLoaded', function() {
-        var btn = document.getElementById('downloadBtn');
-        if (btn) btn.addEventListener('click', startExport);
+        var compileBtn = document.getElementById('compileBtn');
+        var downloadNormalBtn = document.getElementById('downloadNormalBtn');
+        var downloadReverseBtn = document.getElementById('downloadReverseBtn');
+        var togglePreviewBtn = document.getElementById('togglePreviewBtn');
+        var arrowSpacing = document.getElementById('arrowSpacingKm');
+
+        if (compileBtn) compileBtn.addEventListener('click', compilePreview);
+        if (downloadNormalBtn) downloadNormalBtn.addEventListener('click', function() { doDownload(false); });
+        if (downloadReverseBtn) downloadReverseBtn.addEventListener('click', function() { doDownload(true); });
+        if (togglePreviewBtn) togglePreviewBtn.addEventListener('click', function() {
+            if (!appState.compiled) return;
+            appState.previewReversed = !appState.previewReversed;
+            logMsg("Preview switched to " + (appState.previewReversed ? "REVERSE" : "NORMAL"), "meta");
+            updatePreviewRender();
+        });
+
+        if (arrowSpacing) {
+            arrowSpacing.addEventListener('change', function() {
+                if (appState.compiled) {
+                    logMsg("Arrow spacing updated to " + this.value + " km", "meta");
+                    updatePreviewRender();
+                }
+            });
+        }
 
         try {
             var urlParams = new URLSearchParams(window.location.search);
             var sharedText = urlParams.get('text') || "";
             var sharedUrl = urlParams.get('url') || "";
             var combinedShare = sharedText + " " + sharedUrl;
-            
+
             var cleanUrl = "";
             if (combinedShare.indexOf("komoot.de/tour/") > -1 || combinedShare.indexOf("komoot.com/tour/") > -1) {
-                var splitChar = combinedShare.indexOf("komoot.de") > -1 ? "komoot.de/tour/" : "komoot.com/tour/";
-                var idPart = combinedShare.split(splitChar)[1].split(" ")[0].split("?")[0].split("#")[0];
-                cleanUrl = "https://www.komoot.de/tour/" + idPart;
+                var splitA = combinedShare.indexOf("komoot.de") > -1 ? "komoot.de/tour/" : "komoot.com/tour/";
+                var idA = combinedShare.split(splitA)[1].split(" ")[0].split("?")[0].split("#")[0];
+                cleanUrl = "https://www.komoot.de/tour/" + idA;
             } else if (combinedShare.indexOf("komoot.de/smarttour/") > -1 || combinedShare.indexOf("komoot.com/smarttour/") > -1) {
-                var splitChar = combinedShare.indexOf("komoot.de") > -1 ? "komoot.de/smarttour/" : "komoot.com/smarttour/";
-                var idPart = combinedShare.split(splitChar)[1].split(" ")[0].split("?")[0].split("#")[0];
-                cleanUrl = "https://www.komoot.de/smarttour/" + idPart;
+                var splitB = combinedShare.indexOf("komoot.de") > -1 ? "komoot.de/smarttour/" : "komoot.com/smarttour/";
+                var idB = combinedShare.split(splitB)[1].split(" ")[0].split("?")[0].split("#")[0];
+                cleanUrl = "https://www.komoot.de/smarttour/" + idB;
             }
-            
-            if (cleanUrl !== "") {
+
+            if (cleanUrl) {
                 var urlInput = document.getElementById('tourUrl');
                 if (urlInput) {
-                    urlInput.value = cleanUrl + "?shared=true"; 
+                    urlInput.value = cleanUrl + "?shared=true";
                     logMsg("Share Target active. Booting sequence...", "system");
-                    setTimeout(function() { startExport(); }, 1000);
+                    setTimeout(function() { compilePreview(); }, 900);
                 }
             }
-        } catch(e) {}
+        } catch (e) {}
     });
 </script>
 </body>
-</html>
+    </html>
