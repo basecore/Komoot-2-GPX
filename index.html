@@ -87,7 +87,7 @@
         <h1>Komoot 2 GPX</h1>
     </div>
     <div class="meta-header">
-        v3.4 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
+        v3.5 Pro | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
     </div>
     
     <button type="button" id="installAppBtn">
@@ -241,19 +241,60 @@
         }
     }
 
-    function generateGPX(name, items, distance) {
+    function escapeXml(unsafe) {
+        return (unsafe || "").toString().replace(/[<>&'"]/g, function (c) {
+            switch (c) {
+                case '<': return '&lt;';
+                case '>': return '&gt;';
+                case '&': return '&amp;';
+                case '\'': return '&apos;';
+                case '"': return '&quot;';
+            }
+        });
+    }
+
+    function generateGPX(name, items, distance, pois, tourData) {
         var distKm = distance ? (distance / 1000).toFixed(2) + " km" : "Unknown length";
-        logMsg('Compiling GPX...', "system");
+        logMsg('Compiling GPX with POIs...', "system");
         logMsg('Stats: ' + items.length + ' pts | ' + distKm, "info");
         
-        var safeName = name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        var safeName = escapeXml(name);
         var filename = name.replace(/[^a-z0-9äöüß]/gi, '_').toLowerCase() + '.gpx';
         
         var lines = [];
         lines.push('<?xml version="1.0" encoding="UTF-8"?>');
         lines.push('<gpx version="1.1" creator="Komoot2GPX" xmlns="http://www.topografix.com/GPX/1/1">');
-        lines.push('  <trk><name>' + safeName + '</name><trkseg>');
+        
+        // --- Metadaten (Titel & Beschreibung) hinzufügen ---
+        lines.push('  <metadata>');
+        lines.push('    <name>' + safeName + '</name>');
+        if (tourData && tourData.description) {
+            lines.push('    <desc>' + escapeXml(tourData.description) + '</desc>');
+        }
+        lines.push('  </metadata>');
 
+        // --- POIs (Highlights) als Wegpunkte hinzufügen ---
+        if (pois && pois.length > 0) {
+            logMsg('Adding ' + pois.length + ' Highlights/POIs to GPX...', "info");
+            for (var j = 0; j < pois.length; j++) {
+                var poi = pois[j];
+                var poiLat = poi.location ? poi.location.lat : poi.lat;
+                var poiLng = poi.location ? poi.location.lng : poi.lng;
+                var poiName = poi.name || poi.title || "Highlight";
+                var poiDesc = poi.description || "";
+
+                if (poiLat && poiLng) {
+                    lines.push('  <wpt lat="' + poiLat + '" lon="' + poiLng + '">');
+                    lines.push('    <name>' + escapeXml(poiName) + '</name>');
+                    if (poiDesc) lines.push('    <desc>' + escapeXml(poiDesc) + '</desc>');
+                    lines.push('    <sym>Generic</sym>');
+                    lines.push('  </wpt>');
+                }
+            }
+        }
+
+        // --- GPS Track Koordinaten ---
+        lines.push('  <trk><name>' + safeName + '</name><trkseg>');
         for (var i = 0; i < items.length; i++) {
             var pt = items[i];
             lines.push('      <trkpt lat="' + pt.lat + '" lon="' + pt.lng + '">');
@@ -314,6 +355,7 @@
             var tourApiUrl = isSmartTour ? 'https://www.komoot.de/api/v007/discover_tours/' + tourId : 'https://www.komoot.de/api/v007/tours/' + tourId;
             var coordsApiUrl = isSmartTour ? 'https://www.komoot.de/api/v007/smart_tours/' + tourId + '/coordinates' : 'https://www.komoot.de/api/v007/tours/' + tourId + '/coordinates';
 
+            // 1. Hole Metadaten
             var tourData = await fetchWithFallbacks(tourApiUrl, "Metadata");
             
             if (tourData.error) {
@@ -327,6 +369,7 @@
             var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
             var tourDistance = tourData.distance || 0; 
             
+            // 2. Hole Koordinaten
             var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
             
             if (coordsData.error) {
@@ -339,9 +382,23 @@
             if (!coordsData.items || coordsData.items.length === 0) {
                 throw new Error("No GPS data found. The tour might be PRIVATE or empty.");
             }
+
+            // 3. Hole POIs/Highlights (Neu!)
+            var poisData = [];
+            try {
+                var poisApiUrl = isSmartTour ? 'https://www.komoot.de/api/v007/smart_tours/' + tourId + '/highlights' : 'https://www.komoot.de/api/v007/tours/' + tourId + '/highlights';
+                var poisResponse = await fetchWithFallbacks(poisApiUrl, "POIs");
+                if (poisResponse && poisResponse._embedded && poisResponse._embedded.items) {
+                    poisData = poisResponse._embedded.items;
+                }
+            } catch(e) {
+                logMsg("No highlights found or skipped.", "info");
+            }
             
             renderMap(coordsData.items);
-            generateGPX(tourName, coordsData.items, tourDistance);
+            
+            // 4. Übergebe alles an den GPX Generator
+            generateGPX(tourName, coordsData.items, tourDistance, poisData, tourData);
             
             btn.innerHTML = '<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg> Success!';
             
