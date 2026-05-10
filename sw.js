@@ -1,4 +1,4 @@
-const CACHE_NAME = 'komoot-gpx-v4.1-pro';
+const CACHE_NAME = 'komoot-gpx-v4.2-pro';
 
 // Sofort aktivieren
 self.addEventListener('install', (event) => {
