@@ -87,7 +87,7 @@
         <h1>Komoot 2 GPX</h1>
     </div>
     <div class="meta-header">
-        v3.6 Pro (SmartTour Fix) | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
+        v3.7 Pro (SmartTour Fix) | Built by <a href="https://github.com/basecore/Komoot-2-GPX" target="_blank">basecore</a> | May 10, 2026
     </div>
     
     <button type="button" id="installAppBtn">
@@ -365,51 +365,37 @@
             var tourName = tourData.name || tourData.title || 'Komoot_Tour_' + tourId;
             var tourDistance = tourData.distance || 0; 
             
-            // 2. Hole Koordinaten - SMART TOUR WORKAROUND
+            // 2. Hole Koordinaten - SMART TOUR EXTRAKTION FIX
             var coordsDataItems = [];
+            var trueNumericTourId = tourId; // Standardmäßig die ID selbst
             
             if (isSmartTour) {
-                // Bei SmartTours prüfen wir zuerst, ob die Koordinaten (bzw. der Track) 
-                // schon direkt in den Metadaten (_embedded.tour.path) stecken, um den MethodArgumentTypeMismatch zu vermeiden.
-                if (tourData._embedded && tourData._embedded.tour && tourData._embedded.tour._embedded && tourData._embedded.tour._embedded.coordinates) {
-                    logMsg("SmartTour: Extrahiere Koordinaten direkt aus Metadaten.", "success");
-                    coordsDataItems = tourData._embedded.tour._embedded.coordinates.items;
-                } else {
-                    // Fallback, wenn sie nicht drin sind, versuchen wir es über die echte Tour-ID statt der Smart-ID
-                    if (tourData.tour_id) {
-                        logMsg("SmartTour: Leite um auf Standard-Tour ID " + tourData.tour_id, "info");
-                        var fallbackApiUrl = 'https://www.komoot.de/api/v007/tours/' + tourData.tour_id + '/coordinates';
-                        var fallbackCoords = await fetchWithFallbacks(fallbackApiUrl, "Coordinates (Fallback)");
-                        coordsDataItems = fallbackCoords.items;
-                    } else {
-                        throw new Error("Konnte keine Koordinaten für diese SmartTour extrahieren.");
-                    }
-                }
-            } else {
-                // Standard Tour Request
-                var coordsApiUrl = 'https://www.komoot.de/api/v007/tours/' + tourId + '/coordinates';
-                var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
-                
-                if (coordsData.error) {
-                    if (coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
-                         logMsg("NOTICE: This tour is PRIVATE. If it's your own tour, please download it manually.", "warning");
-                         throw new Error("Access Denied: This tour is set to PRIVATE.");
-                    }
-                    throw new Error("API Error: " + coordsData.error);
-                }
-                coordsDataItems = coordsData.items;
+                // Bei SmartTours wie 'e176887173' extrahieren wir die echte numerische ID, indem wir alles nicht-numerische (wie das 'e') entfernen
+                trueNumericTourId = tourId.replace(/\D/g,'');
+                logMsg("SmartTour: Extrahierte echte Tour-ID: " + trueNumericTourId, "info");
             }
+            
+            // Hole Koordinaten immer über den Standard-Endpunkt mit der rein numerischen ID
+            var coordsApiUrl = 'https://www.komoot.de/api/v007/tours/' + trueNumericTourId + '/coordinates';
+            var coordsData = await fetchWithFallbacks(coordsApiUrl, "Coordinates");
+            
+            if (coordsData.error) {
+                if (coordsData.error === "AccessDenied" || coordsData.error === "PrivateTour") {
+                     logMsg("NOTICE: This tour is PRIVATE. If it's your own tour, please download it manually.", "warning");
+                     throw new Error("Access Denied: This tour is set to PRIVATE.");
+                }
+                throw new Error("API Error: " + coordsData.error);
+            }
+            coordsDataItems = coordsData.items;
 
             if (!coordsDataItems || coordsDataItems.length === 0) {
                 throw new Error("No GPS data found. The tour might be PRIVATE or empty.");
             }
 
-            // 3. Hole POIs/Highlights
+            // 3. Hole POIs/Highlights über die numerische ID
             var poisData = [];
             try {
-                // Wenn SmartTour, nutze die zugrunde liegende echte Tour ID für POIs falls verfügbar
-                var poiFetchId = (isSmartTour && tourData.tour_id) ? tourData.tour_id : tourId;
-                var poisApiUrl = 'https://www.komoot.de/api/v007/tours/' + poiFetchId + '/highlights';
+                var poisApiUrl = 'https://www.komoot.de/api/v007/tours/' + trueNumericTourId + '/highlights';
                 var poisResponse = await fetchWithFallbacks(poisApiUrl, "POIs");
                 if (poisResponse && poisResponse._embedded && poisResponse._embedded.items) {
                     poisData = poisResponse._embedded.items;
